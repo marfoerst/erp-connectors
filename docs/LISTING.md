@@ -128,7 +128,12 @@ an ERP; it does not print documents for the merchant. See
 
 ---
 
-## Screenshots to capture
+## Screenshots
+
+**Captured — see `assets/screenshots/`** (six PNGs, German, 1568×773). The
+rationale for each and the rule-by-rule check are in that folder's README.
+
+Original plan, for reference:
 
 Listing rules: *"Images should primarily show your app's actual user
 interface"*, *"Each image in your app listing must be unique"*, no browser
