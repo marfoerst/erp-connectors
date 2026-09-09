@@ -5,11 +5,20 @@ interface LoginErrorMessage {
   shop?: string;
 }
 
+/**
+ * App Store 2.3.1 forbids prompting for a shop domain, so these messages no
+ * longer ask the merchant to enter one — the shop always comes from Shopify.
+ * A missing or invalid shop means the app was opened outside Shopify, which is
+ * what the message now says.
+ */
 export function loginErrorMessage(loginErrors: LoginError): LoginErrorMessage {
-  if (loginErrors?.shop === LoginErrorType.MissingShop) {
-    return { shop: "Please enter your shop domain to log in" };
-  } else if (loginErrors?.shop === LoginErrorType.InvalidShop) {
-    return { shop: "Please enter a valid shop domain to log in" };
+  if (
+    loginErrors?.shop === LoginErrorType.MissingShop ||
+    loginErrors?.shop === LoginErrorType.InvalidShop
+  ) {
+    return {
+      shop: "Open this app from your Shopify admin under Apps.",
+    };
   }
 
   return {};
