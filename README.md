@@ -10,6 +10,7 @@ there are deliberately no Scopevisio tenant settings in `.env`.
 - `docs/PRD.md` — the product requirements: problem, outcomes, capabilities, metrics
 - `docs/API-FINDINGS.md` — what the OpenScope REST API does and does not support
 - `docs/BUILT-FOR-SHOPIFY.md` — Built for Shopify compliance, item by item
+- `docs/DEPLOYMENT.md` — how to deploy it, and why the database must outlive the container
 - `docs/PRIVACY.md` — privacy policy draft, grounded in what the app actually stores
 - `docs/PROTECTED-CUSTOMER-DATA.md` — prepared answers for Shopify's data declaration
 

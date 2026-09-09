@@ -34,9 +34,18 @@ COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY prisma ./prisma
 COPY public ./public
 
-# Don't run as root.
-RUN addgroup -S app && adduser -S app -G app && chown -R app:app /app
-USER app
+# Don't run as root. su-exec lets the entrypoint fix volume ownership as root
+# and then drop privileges.
+RUN apk add --no-cache su-exec \
+    && addgroup -S app && adduser -S app -G app \
+    && chown -R app:app /app
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Stays root only long enough for the entrypoint to chown the volume; the
+# entrypoint then execs as `app`.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # `docker-start` runs `prisma migrate deploy` before serving, so a new revision
 # applies migrations on boot.
