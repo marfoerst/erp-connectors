@@ -238,24 +238,25 @@ function OrderRow({
             <Form method="post">
               <input type="hidden" name="intent" value="decline" />
               <input type="hidden" name="orderGid" value={row.orderGid} />
-              <InlineStack gap="200" blockAlign="end">
-                <Box minWidth="320px">
-                  <TextField
-                    label="Why not?"
-                    name="note"
-                    value={note}
-                    onChange={setNote}
-                    autoComplete="off"
-                    helpText="Recorded in the journal for the audit trail."
-                  />
-                </Box>
-                <Button submit tone="critical" loading={busy}>
-                  Confirm
-                </Button>
-                <Button variant="plain" onClick={() => setDeclining(false)}>
-                  Cancel
-                </Button>
-              </InlineStack>
+              {/* Stacks rather than forcing a 320px column on mobile. */}
+              <BlockStack gap="300">
+                <TextField
+                  label="Why not?"
+                  name="note"
+                  value={note}
+                  onChange={setNote}
+                  autoComplete="off"
+                  helpText="Recorded in the journal for the audit trail."
+                />
+                <InlineStack gap="200">
+                  <Button submit tone="critical" loading={busy}>
+                    Confirm
+                  </Button>
+                  <Button variant="plain" onClick={() => setDeclining(false)}>
+                    Cancel
+                  </Button>
+                </InlineStack>
+              </BlockStack>
             </Form>
           )}
         </InlineStack>

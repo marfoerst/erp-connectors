@@ -60,18 +60,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const settings = connection.settings;
 
-  // Probe the tenant's own master data now, rather than letting each order
-  // discover the gaps one at a time (PRD R-005).
-  let readiness = null;
-  try {
-    readiness = settings ? await checkReadiness(session.shop) : null;
-  } catch {
-    // A failed probe must not make the mapping page unusable.
-  }
-
   return {
     connected: true as const,
-    readiness,
     organisation: connection.organisation,
     vatScopes,
     masterDataError,
@@ -102,12 +92,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
+/** One shape so the component never has to narrow a union of action returns. */
+interface MappingActionResult {
+  ok: boolean;
+  message?: string;
+  readiness?: Awaited<ReturnType<typeof checkReadiness>>;
+}
+
+export const action = async ({
+  request,
+}: ActionFunctionArgs): Promise<MappingActionResult> => {
   const { session } = await authenticate.admin(request);
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "save");
 
   try {
+    if (intent === "readiness") {
+      // Deliberately not in the loader: BFS 2.1.1 budgets LCP at 2.5s and this
+      // makes several live ERP round-trips. Run it when asked, not on paint.
+      const readiness = await checkReadiness(session.shop);
+      return { ok: true, readiness };
+    }
+
     if (intent === "refresh") {
       const result = await refreshAllMasterData(session.shop);
       return {
@@ -299,6 +305,9 @@ function MappingEditor({ data }: { data: ConnectedData }) {
   }, [actionData, current]);
 
   const onSave = useCallback(() => formRef.current?.requestSubmit(), []);
+
+  // Readiness arrives from an action, so it never delays first paint.
+  const readiness = actionData?.readiness ?? null;
 
   const onDiscard = useCallback(() => {
     const i = initial.current;
@@ -619,20 +628,32 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <Text as="p" tone="subdued" variant="bodySm">
                 Tax cases and revenue accounts are read from your Scopevisio
                 organisation and cached for 30 minutes. Refresh after changing
-                your Steuermatrix so the choices above stay in step.
+                your Steuermatrix so the choices above stay in step, and use the
+                check to see which destinations your Steuermatrix can actually
+                book before you switch sync on.
               </Text>
-              {/* A separate form: forms cannot nest, and this is a different intent. */}
-              <Form method="post">
-                <input type="hidden" name="intent" value="refresh" />
-                <Button submit loading={busy}>
-                  Refresh master data from Scopevisio
-                </Button>
-              </Form>
+              {/* Separate forms: forms cannot nest, and these are different
+                  intents. Both are actions rather than loader work so the page
+                  paints without waiting on the ERP (BFS 2.1.1). */}
+              <InlineStack gap="300">
+                <Form method="post">
+                  <input type="hidden" name="intent" value="readiness" />
+                  <Button submit loading={busy} variant="primary">
+                    Check what will actually book
+                  </Button>
+                </Form>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="refresh" />
+                  <Button submit loading={busy}>
+                    Refresh master data
+                  </Button>
+                </Form>
+              </InlineStack>
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {data.readiness && data.readiness.rows.length > 0 && (
+        {readiness && readiness.rows.length > 0 && (
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
@@ -640,20 +661,20 @@ function MappingEditor({ data }: { data: ConnectedData }) {
                   <Text as="h2" variant="headingMd">
                     Will this actually book?
                   </Text>
-                  <Badge tone={data.readiness.blockedCount === 0 ? "success" : "attention"}>
-                    {`${data.readiness.readyCount} of ${data.readiness.rows.length} ready`}
+                  <Badge tone={readiness.blockedCount === 0 ? "success" : "attention"}>
+                    {`${readiness.readyCount} of ${readiness.rows.length} ready`}
                   </Badge>
                 </InlineStack>
 
                 <Text as="p" tone="subdued">
                   Checked against your own Steuermatrix
-                  {data.readiness.learnedFrom === "orders"
+                  {readiness.learnedFrom === "orders"
                     ? ", using the countries your orders actually ship to."
                     : ", using representative destinations until real orders arrive."}
                 </Text>
 
                 <BlockStack gap="300">
-                  {data.readiness.rows.map((row) => (
+                  {readiness.rows.map((row) => (
                     <Box
                       key={row.taxCase}
                       padding="300"

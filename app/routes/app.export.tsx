@@ -110,24 +110,26 @@ function ReturnForm({ batchId, busy }: { batchId: string; busy: boolean }) {
     <Form method="post">
       <input type="hidden" name="intent" value="return" />
       <input type="hidden" name="batchId" value={batchId} />
-      <InlineStack gap="200" blockAlign="end">
-        <Box minWidth="300px">
-          <TextField
-            label="What went wrong?"
-            name="reason"
-            value={reason}
-            onChange={setReason}
-            autoComplete="off"
-            helpText="Recorded in the journal, and the invoices go back in the queue."
-          />
-        </Box>
-        <Button submit tone="critical" loading={busy}>
-          Return to queue
-        </Button>
-        <Button variant="plain" onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-      </InlineStack>
+      {/* Full-width field with the buttons beneath, so this works at any
+          viewport width (BFS 4.1.2). */}
+      <BlockStack gap="300">
+        <TextField
+          label="What went wrong?"
+          name="reason"
+          value={reason}
+          onChange={setReason}
+          autoComplete="off"
+          helpText="Recorded in the journal, and the invoices go back in the queue."
+        />
+        <InlineStack gap="200">
+          <Button submit tone="critical" loading={busy}>
+            Return to queue
+          </Button>
+          <Button variant="plain" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        </InlineStack>
+      </BlockStack>
     </Form>
   );
 }
@@ -190,17 +192,17 @@ export default function ExportPage() {
 
                 <BlockStack gap="150">
                   {pending.map((p) => (
-                    <InlineStack key={p.id} gap="300" blockAlign="center" wrap={false}>
-                      <Box minWidth="120px">
-                        <Text as="span" variant="bodyMd">
-                          {p.orderName}
-                        </Text>
-                      </Box>
+                    // Order name above its detail line, so a long account
+                    // summary wraps instead of scrolling (BFS 4.1.2).
+                    <BlockStack key={p.id} gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">
+                        {p.orderName}
+                      </Text>
                       <Text as="span" tone="subdued" variant="bodySm">
                         {p.countryUsed ?? "-"} · Debitor {p.personalAccount ?? "-"} ·
                         Konto {p.resolvedAccount ?? "-"} · {p.resolvedVatKey ?? "-"}
                       </Text>
-                    </InlineStack>
+                    </BlockStack>
                   ))}
                 </BlockStack>
 

@@ -1,5 +1,5 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
-import { Link as RemixLink, useLoaderData } from "@remix-run/react";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { Form, Link as RemixLink, useLoaderData } from "@remix-run/react";
 import {
   Badge,
   Banner,
@@ -10,11 +10,11 @@ import {
   InlineGrid,
   InlineStack,
   Layout,
-  List,
   Page,
   Text,
 } from "@shopify/polaris";
 
+import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
 import { getConnection, missingSettings } from "../scopevisio/connection.server";
 import { orderCounts } from "../scopevisio/sync.server";
@@ -37,6 +37,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     statusDetail: connection?.statusDetail ?? null,
     organisation: connection?.organisation ?? null,
     syncEnabled: connection?.settings?.syncEnabled ?? false,
+    onboardingDone: Boolean(
+      connection &&
+        connection.settings &&
+        connection.status === "connected" &&
+        missingSettings(connection.settings).length === 0 &&
+        connection.settings.syncEnabled,
+    ),
+    onboardingDismissed: Boolean(connection?.settings?.onboardingDismissedAt),
     autoPost: connection?.settings?.autoPost ?? false,
     gaps: connection ? missingSettings(connection.settings) : [],
     counts,
@@ -48,6 +56,108 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     })),
   };
 };
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const form = await request.formData();
+  if (String(form.get("intent")) === "dismissOnboarding") {
+    await prisma.scopevisioSettings.updateMany({
+      where: { shop: session.shop },
+      data: { onboardingDismissedAt: new Date() },
+    });
+  }
+  return { ok: true };
+};
+
+/**
+ * BFS 4.2.2 wants a concise onboarding that guides to completion and can be
+ * removed afterwards. Three steps, each showing whether it is done, and a
+ * dismiss action once all three are — so a set-up shop is not nagged forever.
+ */
+function Onboarding({
+  connected,
+  mappingComplete,
+  syncEnabled,
+  done,
+}: {
+  connected: boolean;
+  mappingComplete: boolean;
+  syncEnabled: boolean;
+  done: boolean;
+}) {
+  const steps = [
+    {
+      label: "Connect your Scopevisio organisation",
+      detail: "Sign in with the credentials you already use.",
+      complete: connected,
+      url: "/app/connection",
+    },
+    {
+      label: "Confirm how shop data maps onto your accounts",
+      detail: "Customer groups and a Steuersachverhalt per tax case, from your own master data.",
+      complete: mappingComplete,
+      url: "/app/mapping",
+    },
+    {
+      label: "Switch sync on",
+      detail: "Nothing is sent to Scopevisio until you do.",
+      complete: syncEnabled,
+      url: "/app/mapping",
+    },
+  ];
+  const next = steps.find((s) => !s.complete);
+
+  return (
+    <Card>
+      <BlockStack gap="400">
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="h2" variant="headingMd">
+            {done ? "You are set up" : "Three steps to get started"}
+          </Text>
+          <InlineStack gap="200" blockAlign="center">
+            <Badge tone={done ? "success" : "attention"}>
+              {`${steps.filter((s) => s.complete).length} of 3 done`}
+            </Badge>
+            {done && (
+              <Form method="post">
+                <input type="hidden" name="intent" value="dismissOnboarding" />
+                <Button submit variant="plain">
+                  Dismiss
+                </Button>
+              </Form>
+            )}
+          </InlineStack>
+        </InlineStack>
+
+        <BlockStack gap="300">
+          {steps.map((step, i) => (
+            <InlineStack key={step.label} gap="300" blockAlign="start">
+              <Badge tone={step.complete ? "success" : undefined}>
+                {step.complete ? "Done" : String(i + 1)}
+              </Badge>
+              <BlockStack gap="050">
+                <Text as="span" variant="bodyMd">
+                  {step.label}
+                </Text>
+                <Text as="span" tone="subdued" variant="bodySm">
+                  {step.detail}
+                </Text>
+              </BlockStack>
+            </InlineStack>
+          ))}
+        </BlockStack>
+
+        {next && (
+          <Box>
+            <Button url={next.url} variant="primary">
+              {next.label}
+            </Button>
+          </Box>
+        )}
+      </BlockStack>
+    </Card>
+  );
+}
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: "critical" | "success" }) {
   return (
@@ -81,20 +191,14 @@ export default function Overview() {
       }
     >
       <Layout>
-        {!data.connected && (
+        {!(data.onboardingDone && data.onboardingDismissed) && (
           <Layout.Section>
-            <Banner tone="info" title="Connect Scopevisio to get started">
-              <p>
-                Three steps: connect your Scopevisio organisation, review how
-                shop data maps onto your accounts, then switch sync on. Nothing
-                is sent to Scopevisio until you do.
-              </p>
-              <Box paddingBlockStart="300">
-                <Button url="/app/connection" variant="primary">
-                  Connect Scopevisio
-                </Button>
-              </Box>
-            </Banner>
+            <Onboarding
+              connected={data.connected && data.status === "connected"}
+              mappingComplete={data.connected && data.gaps.length === 0}
+              syncEnabled={data.syncEnabled}
+              done={data.onboardingDone}
+            />
           </Layout.Section>
         )}
 
@@ -103,40 +207,11 @@ export default function Overview() {
             <Banner tone="critical" title="The Scopevisio connection is not working">
               <p>{data.statusDetail}</p>
               <p>
-                Orders are being queued, not lost. Reconnect and they will be
+                Orders are queued, not lost. Reconnect and they will be
                 processed.
               </p>
               <Box paddingBlockStart="300">
                 <Button url="/app/connection">Fix the connection</Button>
-              </Box>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {data.connected && data.gaps.length > 0 && (
-          <Layout.Section>
-            <Banner tone="warning" title="Mapping is incomplete">
-              <List>
-                {data.gaps.map((gap) => (
-                  <List.Item key={gap}>{gap}</List.Item>
-                ))}
-              </List>
-              <Box paddingBlockStart="300">
-                <Button url="/app/mapping">Finish the mapping</Button>
-              </Box>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {data.connected && data.gaps.length === 0 && !data.syncEnabled && (
-          <Layout.Section>
-            <Banner tone="warning" title="Sync is switched off">
-              <p>
-                The mapping is complete, but paid orders are not being sent to
-                Scopevisio yet. Turn sync on when you are ready.
-              </p>
-              <Box paddingBlockStart="300">
-                <Button url="/app/mapping">Open mapping</Button>
               </Box>
             </Banner>
           </Layout.Section>
@@ -239,12 +314,12 @@ export default function Overview() {
                 </InlineStack>
                 <BlockStack gap="200">
                   {data.events.map((e) => (
-                    <InlineStack key={e.id} gap="300" blockAlign="start" wrap={false}>
-                      <Box minWidth="150px">
-                        <Text as="span" tone="subdued" variant="bodySm">
-                          {new Date(e.createdAt).toLocaleString("de-DE")}
-                        </Text>
-                      </Box>
+                    // Stacks on mobile: the timestamp sits above the message
+                    // rather than pinning a fixed-width column (BFS 4.1.2).
+                    <BlockStack key={e.id} gap="050">
+                      <Text as="span" tone="subdued" variant="bodySm">
+                        {new Date(e.createdAt).toLocaleString("de-DE")}
+                      </Text>
                       <Text
                         as="span"
                         variant="bodySm"
@@ -252,7 +327,7 @@ export default function Overview() {
                       >
                         {e.message}
                       </Text>
-                    </InlineStack>
+                    </BlockStack>
                   ))}
                 </BlockStack>
               </BlockStack>

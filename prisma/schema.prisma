@@ -109,6 +109,10 @@ model ScopevisioSettings {
   /// Optional export template name for generated PDFs.
   documentTemplate       String?
 
+  /// Set when the merchant dismisses the onboarding card. BFS 4.2.2 requires
+  /// "a mechanism to remove onboarding UI after completion".
+  onboardingDismissedAt DateTime?
+
   /// Order intake cursor. The connector polls the Admin API for paid orders
   /// rather than relying only on webhooks, because:
   ///   - webhook subscriptions on `orders/paid` require Shopify's protected

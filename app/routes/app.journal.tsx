@@ -70,7 +70,8 @@ export default function JournalPage() {
                     borderColor="border-secondary"
                   >
                     <BlockStack gap="150">
-                      <InlineStack gap="300" blockAlign="center" wrap={false}>
+                      {/* wraps on narrow viewports rather than forcing horizontal scroll */}
+                      <InlineStack gap="300" blockAlign="center">
                         <Text as="span" tone="subdued" variant="bodySm">
                           {new Date(e.createdAt).toLocaleString("de-DE")}
                         </Text>

@@ -2,7 +2,6 @@ import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "../shopify.server";
@@ -20,7 +19,10 @@ export default function App() {
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <NavMenu>
+      {/* BFS 4.1.4: primary navigation must use App Bridge `s-app-nav` so it
+          renders in the Shopify admin menu rather than as separate in-app
+          navigation. The first link is the app home. */}
+      <s-app-nav>
         <Link to="/app" rel="home">
           Overview
         </Link>
@@ -29,7 +31,7 @@ export default function App() {
         <Link to="/app/orders">Orders</Link>
         <Link to="/app/export">Export</Link>
         <Link to="/app/journal">Journal</Link>
-      </NavMenu>
+      </s-app-nav>
       <Outlet />
     </AppProvider>
   );
