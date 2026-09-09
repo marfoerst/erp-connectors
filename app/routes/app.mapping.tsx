@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { SaveBar } from "@shopify/app-bridge-react";
 import {
   Badge,
   Banner,
@@ -213,6 +214,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
+  const formRef = useRef<HTMLFormElement>(null);
 
   const s = data.settings;
   const [syncEnabled, setSyncEnabled] = useState(s?.syncEnabled ?? false);
@@ -243,6 +245,79 @@ function MappingEditor({ data }: { data: ConnectedData }) {
     ),
   );
 
+  /**
+   * Built for Shopify 4.1.5: form inputs "should generally be saved using the
+   * App Bridge Contextual Save Bar", and it is an explicit rejection reason if
+   * a merchant can navigate away without interacting with it. So the save bar
+   * is driven by whether the form actually differs from what was loaded.
+   */
+  const current = useMemo(
+    () => ({
+      syncEnabled,
+      autoPost,
+      customerGroup,
+      guestCustomerGroup,
+      numberRangeNumber,
+      guestUseCpd,
+      ossRegistered,
+      homeCountry,
+      tolerance,
+      copyVat,
+      copyAccounts,
+      template,
+      deliveryMode,
+      scopes,
+    }),
+    [
+      syncEnabled, autoPost, customerGroup, guestCustomerGroup,
+      numberRangeNumber, guestUseCpd, ossRegistered, homeCountry, tolerance,
+      copyVat, copyAccounts, template, deliveryMode, scopes,
+    ],
+  );
+
+  const initial = useRef(current);
+  const dirty = JSON.stringify(current) !== JSON.stringify(initial.current);
+
+  useEffect(() => {
+    const bar = document.getElementById("mapping-save-bar") as
+      | (HTMLElement & { show?: () => void; hide?: () => void })
+      | null;
+    if (!bar) return;
+    // App Bridge owns the bar; guard the calls so a non-embedded render (or an
+    // older App Bridge) degrades to the plain form rather than throwing.
+    try {
+      if (dirty) bar.show?.();
+      else bar.hide?.();
+    } catch {
+      /* not embedded */
+    }
+  }, [dirty]);
+
+  // A successful save becomes the new baseline, which also hides the bar.
+  useEffect(() => {
+    if (actionData?.ok) initial.current = current;
+  }, [actionData, current]);
+
+  const onSave = useCallback(() => formRef.current?.requestSubmit(), []);
+
+  const onDiscard = useCallback(() => {
+    const i = initial.current;
+    setSyncEnabled(i.syncEnabled);
+    setAutoPost(i.autoPost);
+    setCustomerGroup(i.customerGroup);
+    setGuestCustomerGroup(i.guestCustomerGroup);
+    setNumberRangeNumber(i.numberRangeNumber);
+    setGuestUseCpd(i.guestUseCpd);
+    setOssRegistered(i.ossRegistered);
+    setHomeCountry(i.homeCountry);
+    setTolerance(i.tolerance);
+    setCopyVat(i.copyVat);
+    setCopyAccounts(i.copyAccounts);
+    setTemplate(i.template);
+    setDeliveryMode(i.deliveryMode);
+    setScopes(i.scopes);
+  }, []);
+
   const scopeOptions = [
     { label: "— not configured —", value: "" },
     ...data.vatScopes.map((v) => ({
@@ -256,39 +331,33 @@ function MappingEditor({ data }: { data: ConnectedData }) {
       title="Mapping"
       subtitle={`How Shopify data becomes accounting data in ${data.organisation}`}
     >
+      <SaveBar id="mapping-save-bar">
+        <button variant="primary" onClick={onSave} disabled={busy} />
+        <button onClick={onDiscard} disabled={busy} />
+      </SaveBar>
+
       <Layout>
-        {actionData?.message && (
+        {/* BFS 4.3.4 forbids two or more banners in close proximity, so the
+            most actionable single message wins: what you just did, then a
+            hard master-data failure, then the readiness gaps. */}
+        {actionData?.message ? (
           <Layout.Section>
             <Banner tone={actionData.ok ? "success" : "critical"}>
               <p>{actionData.message}</p>
             </Banner>
           </Layout.Section>
-        )}
-
-        {data.masterDataError && (
+        ) : data.masterDataError ? (
           <Layout.Section>
             <Banner tone="critical" title="Could not read your Steuermatrix">
               <p>{data.masterDataError}</p>
               <p>
-                The connector user probably lacks the “Stammdaten · Steuermatrix
-                (Anzeigen)” profile. Tax cases cannot be chosen until this works.
+                The connector user probably lacks the &ldquo;Stammdaten &middot;
+                Steuermatrix (Anzeigen)&rdquo; profile. Tax cases cannot be
+                chosen until this works.
               </p>
             </Banner>
           </Layout.Section>
-        )}
-
-        {data.stale && (
-          <Layout.Section>
-            <Banner tone="warning">
-              <p>
-                Showing cached master data — Scopevisio could not be reached just
-                now. Refresh below before relying on these choices.
-              </p>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {data.gaps.length > 0 && (
+        ) : data.gaps.length > 0 ? (
           <Layout.Section>
             <Banner tone="warning" title="Not ready to sync yet">
               <List>
@@ -296,12 +365,27 @@ function MappingEditor({ data }: { data: ConnectedData }) {
                   <List.Item key={gap}>{gap}</List.Item>
                 ))}
               </List>
+              {data.stale && (
+                <p>
+                  Master data shown is cached — Scopevisio could not be reached
+                  just now. Refresh before relying on these choices.
+                </p>
+              )}
             </Banner>
           </Layout.Section>
-        )}
+        ) : data.stale ? (
+          <Layout.Section>
+            <Banner tone="warning">
+              <p>
+                Showing cached master data — Scopevisio could not be reached
+                just now. Refresh below before relying on these choices.
+              </p>
+            </Banner>
+          </Layout.Section>
+        ) : null}
 
         <Layout.Section>
-          <Form method="post">
+          <Form method="post" ref={formRef}>
             <BlockStack gap="500">
               <Card>
                 <BlockStack gap="400">

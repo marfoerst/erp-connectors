@@ -13,7 +13,7 @@ client_id = "7652a32e3cbd24225992a66c9ed4f341"
 # For production this must become the app's real public host.
 application_url = "https://localhost:3000"
 embedded = true
-name = "Scopevisio ERP Connector"
+name = "Scopevisio ERP"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes

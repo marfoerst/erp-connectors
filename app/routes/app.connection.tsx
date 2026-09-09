@@ -53,7 +53,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
+/** One shape, so the component does not have to narrow a union of returns. */
+interface ActionResult {
+  ok: boolean;
+  message?: string;
+  fieldErrors?: Record<string, string>;
+  master?: {
+    vatScopes: number | null;
+    vatMatrix: number | null;
+    revenueAccounts: number | null;
+    errors: string[];
+  };
+}
+
+export const action = async ({
+  request,
+}: ActionFunctionArgs): Promise<ActionResult> => {
   const { session } = await authenticate.admin(request);
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "save");
@@ -77,23 +92,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const password = String(form.get("password") ?? "");
     const baseUrl = String(form.get("baseUrl") ?? DEFAULT_BASE_URL).trim();
 
-    // organisation is intentionally absent: the token endpoint resolves it.
-    const missing = [
-      !customer && "customer number",
-      !username && "user",
-      !password && "password",
-    ].filter(Boolean);
-
-    if (missing.length) {
-      return { ok: false, message: `Please fill in the ${missing.join(", ")}.` };
+    /**
+     * Built for Shopify 4.2.4: errors should "appear next to relevant fields
+     * when possible", and a contextual error shown only as a page banner is an
+     * explicit rejection reason. So validation returns per-field messages.
+     * organisation is intentionally absent — the token endpoint resolves it.
+     */
+    const fieldErrors: Record<string, string> = {};
+    if (!customer) fieldErrors.customer = "Enter your Scopevisio customer number.";
+    else if (!/^\d{7}$/.test(customer)) {
+      fieldErrors.customer =
+        "This is seven digits — you will find it in your Scopevisio customer portal.";
     }
+    if (!username) fieldErrors.username = "Enter the user this app should sign in as.";
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(username)) {
+      fieldErrors.username = "Enter a valid e-mail address.";
+    }
+    if (!password) fieldErrors.password = "Enter the password for that user.";
 
-    if (!/^\d{7}$/.test(customer)) {
-      return {
-        ok: false,
-        message:
-          "The Scopevisio customer number is seven digits. You will find it in your customer portal.",
-      };
+    if (Object.keys(fieldErrors).length > 0) {
+      return { ok: false, fieldErrors };
     }
 
     await saveConnection(session.shop, {
@@ -125,6 +143,9 @@ export default function ConnectionPage() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
+  // Errors only exist after a submit, so fields never show an error before the
+  // merchant has interacted with them (BFS 4.2.4).
+  const fieldErrors: Record<string, string> = actionData?.fieldErrors ?? {};
 
   const [customer, setCustomer] = useState(connection?.customer ?? "");
   const [organisation, setOrganisation] = useState(connection?.organisation ?? "");
@@ -142,31 +163,19 @@ export default function ConnectionPage() {
   return (
     <Page title="Scopevisio connection" subtitle="Where this app gets its accounting data">
       <Layout>
-        {!keyConfigured && (
-          <Layout.Section>
-            <Banner tone="critical" title="Credential encryption is not configured">
-              <p>
-                <code>SCOPEVISIO_ENCRYPTION_KEY</code> is not set, so credentials
-                cannot be stored safely. Generate one with{" "}
-                <code>openssl rand -base64 32</code> and add it to the app's
-                environment before connecting.
-              </p>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {actionData?.message && (
+        {/* BFS 4.3.4 forbids stacking banners, so exactly one is shown: the
+            result of what the merchant just did takes precedence over the
+            standing connection warning. */}
+        {actionData?.message ? (
           <Layout.Section>
             <Banner
               tone={actionData.ok ? "success" : "critical"}
-              title={actionData.ok ? "Done" : "Could not connect"}
+              title={actionData.ok ? "Connected" : "Could not connect"}
             >
               <p>{actionData.message}</p>
             </Banner>
           </Layout.Section>
-        )}
-
-        {connection?.status === "error" && connection.statusDetail && (
+        ) : connection?.status === "error" && connection.statusDetail ? (
           <Layout.Section>
             <Banner tone="warning" title="The connection stopped working">
               <p>{connection.statusDetail}</p>
@@ -176,7 +185,18 @@ export default function ConnectionPage() {
               </p>
             </Banner>
           </Layout.Section>
-        )}
+        ) : !keyConfigured ? (
+          <Layout.Section>
+            <Banner tone="critical" title="Credential encryption is not configured">
+              <p>
+                <code>SCOPEVISIO_ENCRYPTION_KEY</code> is not set, so credentials
+                cannot be stored safely. Generate one with{" "}
+                <code>openssl rand -base64 32</code> and add it to the app&rsquo;s
+                environment before connecting.
+              </p>
+            </Banner>
+          </Layout.Section>
+        ) : null}
 
         <Layout.Section>
           <Card>
@@ -207,6 +227,7 @@ export default function ConnectionPage() {
                       autoComplete="off"
                       helpText="Seven digits, from your Scopevisio customer portal."
                       maxLength={7}
+                      error={fieldErrors.customer}
                     />
                     <TextField
                       label="Organisation (optional)"
@@ -227,6 +248,7 @@ export default function ConnectionPage() {
                       onChange={setUsername}
                       autoComplete="off"
                       helpText="We recommend a dedicated integration user rather than a personal login."
+                      error={fieldErrors.username}
                     />
                     <TextField
                       label="Password"
@@ -235,6 +257,7 @@ export default function ConnectionPage() {
                       value={password}
                       onChange={setPassword}
                       autoComplete="off"
+                      error={fieldErrors.password}
                       helpText={
                         connection
                           ? "Leave blank only if you are not changing it — re-entering it re-authorises the connection."

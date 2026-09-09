@@ -12,7 +12,10 @@ client_id = "7652a32e3cbd24225992a66c9ed4f341"
 # no dev server is running; for production it must be the app's real host.
 application_url = "https://localhost:3000"
 embedded = true
-name = "Scopevisio ERP Connector"
+# BFS 4.1.3: the app name "should not truncate in the Shopify navigation menu".
+# "Scopevisio ERP Connector" (24 chars) truncates; this does not. The App Store
+# listing title can still be longer and more descriptive.
+name = "Scopevisio ERP"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
