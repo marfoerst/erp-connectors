@@ -14,6 +14,7 @@ import {
 
 import { authenticate } from "../shopify.server";
 import { recentEvents } from "../scopevisio/log.server";
+import { makeT, resolveLocale } from "../i18n";
 
 /**
  * The append-only journal. This exists so a bookkeeper can answer "what
@@ -26,6 +27,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const events = await recentEvents(session.shop, 250);
 
   return {
+    locale: resolveLocale(new URL(request.url).searchParams.get("locale")),
     events: events.map((e) => ({
       id: e.id,
       level: e.level,
@@ -38,25 +40,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function JournalPage() {
-  const { events } = useLoaderData<typeof loader>();
+  const { events, locale } = useLoaderData<typeof loader>();
+  const t = makeT(locale);
 
   return (
     <Page
-      title="Journal"
-      subtitle="Everything the connector did, newest first. Entries are never changed or removed."
+      title={t("journal.title")}
+      subtitle={t("journal.subtitle")}
     >
       <Layout>
         <Layout.Section>
           {events.length === 0 ? (
             <Card>
               <EmptyState
-                heading="Nothing has happened yet"
+                heading={t("journal.empty")}
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
-                <p>
-                  Once Scopevisio is connected and sync is on, every booking and
-                  every held document will be recorded here.
-                </p>
+                <p>{t("journal.empty.detail")}</p>
               </EmptyState>
             </Card>
           ) : (
@@ -73,7 +73,7 @@ export default function JournalPage() {
                       {/* wraps on narrow viewports rather than forcing horizontal scroll */}
                       <InlineStack gap="300" blockAlign="center">
                         <Text as="span" tone="subdued" variant="bodySm">
-                          {new Date(e.createdAt).toLocaleString("de-DE")}
+                          {new Date(e.createdAt).toLocaleString(locale === "de" ? "de-DE" : "en-GB")}
                         </Text>
                         <Badge
                           tone={

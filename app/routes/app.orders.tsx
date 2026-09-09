@@ -27,6 +27,7 @@ import {
 import { fetchOrder } from "../scopevisio/fetch-order.server";
 import { pollOrders } from "../scopevisio/intake.server";
 import { HOLD_REASON_LABEL } from "../scopevisio/constants";
+import { makeT, resolveLocale, type Locale } from "../i18n";
 
 /**
  * PRD C-009 / C-010 — the review queue. Every entry is phrased as an
@@ -44,6 +45,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   ]);
 
   return {
+    locale: resolveLocale(new URL(request.url).searchParams.get("locale")),
     counts,
     rows: rows.map((r) => ({
       id: r.id,
@@ -65,6 +67,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
+  const t = makeT(resolveLocale(new URL(request.url).searchParams.get("locale")));
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "");
   const orderGid = String(form.get("orderGid") ?? "");
@@ -73,10 +76,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (intent === "decline") {
       const note = String(form.get("note") ?? "").trim();
       if (!note) {
-        return { ok: false, message: "Please say why this order will not be booked." };
+        return { ok: false, message: t("orders.decline.needReason") };
       }
       await declineOrder(shop, orderGid, session.onlineAccessInfo?.associated_user?.email ?? "a user", note);
-      return { ok: true, message: "Recorded — this order will not be booked." };
+      return { ok: true, message: t("orders.decline.done") };
     }
 
     if (intent === "retry") {
@@ -88,7 +91,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const order = await fetchOrder(admin, orderGid);
 
       if (!order) {
-        return { ok: false, message: "Shopify no longer returns this order." };
+        return { ok: false, message: t("orders.retry.gone") };
       }
 
       const outcome = await syncOrder(shop, order);
@@ -100,7 +103,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return { ok: false, message: outcome.detail };
       }
       if (outcome.state === "ready_to_export") {
-        return { ok: true, message: "Prepared — it is now on the Export page." };
+        return { ok: true, message: t("orders.retry.prepared") };
       }
       return { ok: false, message: `Skipped: ${outcome.reason}.` };
     }
@@ -119,8 +122,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         ok: true,
         message:
           r.scanned === 0
-            ? "No new paid orders since the last check."
-            : `${r.scanned} paid order(s) found — ${r.prepared} prepared, ${r.held} need a decision, ${r.skipped} already handled.`,
+            ? t("orders.check.none")
+            : t("orders.check.result", {
+                scanned: r.scanned, prepared: r.prepared,
+                held: r.held, skipped: r.skipped,
+              }),
       };
     }
 
@@ -128,7 +134,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } catch (err) {
     return {
       ok: false,
-      message: err instanceof Error ? err.message : "Something went wrong.",
+      message: err instanceof Error ? err.message : t("common.error"),
     };
   }
 };
@@ -136,7 +142,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 function OrderRow({
   row,
   busy,
+  locale,
 }: {
+  locale: Locale;
   row: {
     orderGid: string;
     orderName: string | null;
@@ -152,6 +160,7 @@ function OrderRow({
   };
   busy: boolean;
 }) {
+  const t = makeT(locale);
   const [note, setNote] = useState("");
   const [declining, setDeclining] = useState(false);
 
@@ -169,7 +178,7 @@ function OrderRow({
             {row.countryUsed && <Badge>{row.countryUsed}</Badge>}
           </InlineStack>
           <Text as="span" tone="subdued" variant="bodySm">
-            {new Date(row.createdAt).toLocaleString("de-DE")}
+            {new Date(row.createdAt).toLocaleString(locale === "de" ? "de-DE" : "en-GB")}
           </Text>
         </InlineStack>
 
@@ -184,7 +193,7 @@ function OrderRow({
             <InlineStack gap="500">
               <BlockStack gap="050">
                 <Text as="span" tone="subdued" variant="bodySm">
-                  Shopify VAT
+                  {t("orders.tax.shopify")}
                 </Text>
                 <Text as="span" variant="headingSm">
                   {(row.shopifyTaxCents / 100).toFixed(2)}
@@ -192,7 +201,7 @@ function OrderRow({
               </BlockStack>
               <BlockStack gap="050">
                 <Text as="span" tone="subdued" variant="bodySm">
-                  Scopevisio VAT
+                  {t("orders.tax.erp")}
                 </Text>
                 <Text as="span" variant="headingSm">
                   {(row.erpTaxCents / 100).toFixed(2)}
@@ -200,7 +209,7 @@ function OrderRow({
               </BlockStack>
               <BlockStack gap="050">
                 <Text as="span" tone="subdued" variant="bodySm">
-                  Difference
+                  {t("orders.tax.diff")}
                 </Text>
                 <Text as="span" variant="headingSm" tone="critical">
                   {((row.erpTaxCents - row.shopifyTaxCents) / 100).toFixed(2)}
@@ -212,13 +221,13 @@ function OrderRow({
 
         {row.documentNumber && (
           <Text as="p" tone="subdued" variant="bodySm">
-            Scopevisio document {row.documentNumber} exists but is not posted.
+            {t("orders.doc.unposted", { n: row.documentNumber ?? "" })}
           </Text>
         )}
 
         {row.attempts > 1 && (
           <Text as="p" tone="subdued" variant="bodySm">
-            Tried {row.attempts} times.
+            {t("orders.attempts", { n: row.attempts })}
           </Text>
         )}
 
@@ -227,12 +236,12 @@ function OrderRow({
             <input type="hidden" name="intent" value="retry" />
             <input type="hidden" name="orderGid" value={row.orderGid} />
             <Button submit loading={busy}>
-              Try again
+              {t("orders.retry")}
             </Button>
           </Form>
           {!declining ? (
             <Button variant="plain" tone="critical" onClick={() => setDeclining(true)}>
-              Will not be booked
+              {t("orders.decline")}
             </Button>
           ) : (
             <Form method="post">
@@ -241,19 +250,19 @@ function OrderRow({
               {/* Stacks rather than forcing a 320px column on mobile. */}
               <BlockStack gap="300">
                 <TextField
-                  label="Why not?"
+                  label={t("orders.decline.why")}
                   name="note"
                   value={note}
                   onChange={setNote}
                   autoComplete="off"
-                  helpText="Recorded in the journal for the audit trail."
+                  helpText={t("orders.decline.why.help")}
                 />
                 <InlineStack gap="200">
                   <Button submit tone="critical" loading={busy}>
-                    Confirm
+                    {t("orders.decline.confirm")}
                   </Button>
                   <Button variant="plain" onClick={() => setDeclining(false)}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </InlineStack>
               </BlockStack>
@@ -266,15 +275,20 @@ function OrderRow({
 }
 
 export default function OrdersPage() {
-  const { rows, counts } = useLoaderData<typeof loader>();
+  const { rows, counts, locale } = useLoaderData<typeof loader>();
+  const t = makeT(locale);
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
 
   return (
     <Page
-      title="Orders needing a decision"
-      subtitle={`${counts.booked} booked · ${counts.held + counts.pending} waiting · ${counts.declined} declined`}
+      title={t("orders.title")}
+      subtitle={t("orders.subtitle", {
+        booked: counts.booked,
+        waiting: counts.held + counts.pending,
+        declined: counts.declined,
+      })}
     >
       <Layout>
         {actionData?.message && (
@@ -292,18 +306,16 @@ export default function OrdersPage() {
               <InlineStack align="space-between" blockAlign="center">
                 <BlockStack gap="100">
                   <Text as="h2" variant="headingMd">
-                    Check Shopify for paid orders
+                    {t("orders.check.title")}
                   </Text>
                   <Text as="p" tone="subdued" variant="bodySm">
-                    Orders normally arrive on their own. Use this to pull in
-                    anything missed — for example while Scopevisio was
-                    unreachable, or before order webhooks are approved.
+                    {t("orders.check.detail")}
                   </Text>
                 </BlockStack>
                 <Form method="post">
                   <input type="hidden" name="intent" value="poll" />
                   <Button submit loading={busy}>
-                    Check now
+                    {t("orders.check.button")}
                   </Button>
                 </Form>
               </InlineStack>
@@ -315,20 +327,16 @@ export default function OrdersPage() {
           {rows.length === 0 ? (
             <Card>
               <EmptyState
-                heading="Nothing waiting"
+                heading={t("orders.empty")}
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
-                <p>
-                  Every order the connector has seen was either booked or
-                  deliberately declined. An empty queue means the automatic
-                  bookings can be trusted.
-                </p>
+                <p>{t("orders.empty.detail")}</p>
               </EmptyState>
             </Card>
           ) : (
             <BlockStack gap="400">
               {rows.map((row) => (
-                <OrderRow key={row.id} row={row} busy={busy} />
+                <OrderRow key={row.id} row={row} busy={busy} locale={locale} />
               ))}
             </BlockStack>
           )}

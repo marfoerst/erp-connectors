@@ -25,6 +25,7 @@ import {
   returnBatchToQueue,
 } from "../scopevisio/csv-export.server";
 import { getConnection } from "../scopevisio/connection.server";
+import { makeT, resolveLocale, type Locale } from "../i18n";
 
 /**
  * The delivery surface. Prepared invoices are downloaded as a CSV, imported in
@@ -45,6 +46,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   ]);
 
   return {
+    locale: resolveLocale(new URL(request.url).searchParams.get("locale")),
     deliveryMode: connection?.settings?.deliveryMode ?? "csv",
     organisation: connection?.organisation ?? null,
     pending: pending.map((r) => ({
@@ -67,6 +69,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
+  const t = makeT(resolveLocale(new URL(request.url).searchParams.get("locale")));
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "");
   const batchId = String(form.get("batchId") ?? "");
@@ -75,33 +78,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     if (intent === "confirm") {
       const n = await confirmImported(shop, batchId, who);
-      return { ok: true, message: `${n} invoice(s) marked as booked in Scopevisio.` };
+      return { ok: true, message: t("export.confirmed", { n }) };
     }
     if (intent === "return") {
       const reason = String(form.get("reason") ?? "").trim();
       if (!reason) {
-        return { ok: false, message: "Please say what went wrong with the import." };
+        return { ok: false, message: t("export.failed.needReason") };
       }
       const n = await returnBatchToQueue(shop, batchId, reason);
-      return { ok: true, message: `${n} invoice(s) returned to the queue.` };
+      return { ok: true, message: t("export.returned", { n }) };
     }
     return { ok: false, message: "Unknown action." };
   } catch (err) {
     return {
       ok: false,
-      message: err instanceof Error ? err.message : "Something went wrong.",
+      message: err instanceof Error ? err.message : t("common.error"),
     };
   }
 };
 
-function ReturnForm({ batchId, busy }: { batchId: string; busy: boolean }) {
+function ReturnForm({
+  batchId,
+  busy,
+  locale,
+}: {
+  batchId: string;
+  busy: boolean;
+  locale: Locale;
+}) {
+  const t = makeT(locale);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
 
   if (!open) {
     return (
       <Button variant="plain" tone="critical" onClick={() => setOpen(true)}>
-        Import failed
+        {t("export.failed")}
       </Button>
     );
   }
@@ -114,19 +126,19 @@ function ReturnForm({ batchId, busy }: { batchId: string; busy: boolean }) {
           viewport width (BFS 4.1.2). */}
       <BlockStack gap="300">
         <TextField
-          label="What went wrong?"
+          label={t("export.failed.why")}
           name="reason"
           value={reason}
           onChange={setReason}
           autoComplete="off"
-          helpText="Recorded in the journal, and the invoices go back in the queue."
+          helpText={t("export.failed.why.help")}
         />
         <InlineStack gap="200">
           <Button submit tone="critical" loading={busy}>
-            Return to queue
+            {t("export.failed.confirm")}
           </Button>
           <Button variant="plain" onClick={() => setOpen(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </InlineStack>
       </BlockStack>
@@ -135,19 +147,20 @@ function ReturnForm({ batchId, busy }: { batchId: string; busy: boolean }) {
 }
 
 export default function ExportPage() {
-  const { pending, batches, deliveryMode, organisation } =
+  const { pending, batches, deliveryMode, organisation, locale } =
     useLoaderData<typeof loader>();
+  const t = makeT(locale);
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
 
   return (
     <Page
-      title="Export to Scopevisio"
+      title={t("export.title")}
       subtitle={
         organisation
-          ? `Prepared invoices for ${organisation}`
-          : "Prepared invoices"
+          ? t("export.subtitle", { org: organisation })
+          : t("export.subtitle.plain")
       }
     >
       <Layout>
@@ -161,12 +174,8 @@ export default function ExportPage() {
 
         {deliveryMode !== "csv" && (
           <Layout.Section>
-            <Banner tone="warning" title="Delivery mode is set to direct API import">
-              <p>
-                This page only applies in CSV mode. Direct document import is
-                not currently available, so orders will be held instead. Switch
-                delivery back to CSV on the Mapping page.
-              </p>
+            <Banner tone="warning" title={t("export.apiMode")}>
+              <p>{t("export.apiMode.detail")}</p>
             </Banner>
           </Layout.Section>
         )}
@@ -177,17 +186,13 @@ export default function ExportPage() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    {pending.length} invoice{pending.length === 1 ? "" : "s"} ready
+                    {t("export.ready", { n: pending.length })}
                   </Text>
-                  <Badge tone="success">VAT resolved</Badge>
+                  <Badge tone="success">{t("export.vatResolved")}</Badge>
                 </InlineStack>
 
                 <Text as="p" tone="subdued">
-                  Each of these has its customer set up as a debitor and its
-                  Erlöskonto and Steuerschlüssel already resolved from your
-                  Steuermatrix. Download the file, then in Scopevisio go to
-                  Abrechnung → Abrechnungsbelege and import it. You map the
-                  columns once; the result is a normal Faktura you can send.
+                  {t("export.ready.detail")}
                 </Text>
 
                 <BlockStack gap="150">
@@ -211,14 +216,12 @@ export default function ExportPage() {
                   {/* Polaris types Button children as a string, so the count
                       is composed rather than interpolated as a number. */}
                   <Button url="/app/export.csv" variant="primary" download>
-                    {`Download CSV (${pending.length})`}
+                    {t("export.download", { n: pending.length })}
                   </Button>
                 </Box>
 
                 <Text as="p" tone="subdued" variant="bodySm">
-                  Downloading marks these as exported so the next file will not
-                  contain them again — importing the same batch twice would
-                  create duplicate invoices.
+                  {t("export.download.note")}
                 </Text>
               </BlockStack>
             </Card>
@@ -230,12 +233,10 @@ export default function ExportPage() {
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  Waiting for your confirmation
+                  {t("export.awaiting.title")}
                 </Text>
                 <Text as="p" tone="subdued">
-                  These batches have been downloaded. The connector cannot see
-                  whether Scopevisio accepted the import, so tell it what
-                  happened — that is what keeps the audit trail honest.
+                  {t("export.awaiting.detail")}
                 </Text>
 
                 {batches.map((b) => (
@@ -253,7 +254,7 @@ export default function ExportPage() {
                         <Text as="span" tone="subdued" variant="bodySm">
                           {b.count} invoice{b.count === 1 ? "" : "s"} ·{" "}
                           {b.exportedAt
-                            ? new Date(b.exportedAt).toLocaleString("de-DE")
+                            ? new Date(b.exportedAt).toLocaleString(locale === "de" ? "de-DE" : "en-GB")
                             : "—"}
                         </Text>
                       </InlineStack>
@@ -262,13 +263,13 @@ export default function ExportPage() {
                           <input type="hidden" name="intent" value="confirm" />
                           <input type="hidden" name="batchId" value={b.batchId} />
                           <Button submit variant="primary" loading={busy}>
-                            Imported successfully
+                            {t("export.confirm")}
                           </Button>
                         </Form>
                         <Button url={`/app/export.csv?batch=${b.batchId}`} download variant="plain">
-                          Download again
+                          {t("export.again")}
                         </Button>
-                        <ReturnForm batchId={b.batchId} busy={busy} />
+                        <ReturnForm batchId={b.batchId} busy={busy} locale={locale} />
                       </InlineStack>
                     </BlockStack>
                   </Box>
@@ -282,14 +283,10 @@ export default function ExportPage() {
           <Layout.Section>
             <Card>
               <EmptyState
-                heading="Nothing to export"
+                heading={t("export.empty")}
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
-                <p>
-                  Paid orders appear here once the connector has prepared them.
-                  If you expected something, check the Orders page — an order
-                  may be waiting on a decision.
-                </p>
+                <p>{t("export.empty.detail")}</p>
               </EmptyState>
             </Card>
           </Layout.Section>
@@ -299,23 +296,20 @@ export default function ExportPage() {
           <Card>
             <BlockStack gap="200">
               <Text as="h3" variant="headingSm">
-                How to import in Scopevisio
+                {t("export.how")}
               </Text>
               <List type="number">
-                <List.Item>Open Scopevisio → Abrechnung → Abrechnungsbelege.</List.Item>
-                <List.Item>Choose Import and select the downloaded CSV.</List.Item>
+                <List.Item>{t("export.how.1")}</List.Item>
+                <List.Item>{t("export.how.2")}</List.Item>
                 <List.Item>
-                  Map the columns — the headers already use Scopevisio field
-                  names, so this is usually one-to-one. The mapping is saved for
-                  next time.
+                  {t("export.how.3")}
                 </List.Item>
                 <List.Item>
-                  Check the imported Belege, then come back here and confirm.
+                  {t("export.how.4")}
                 </List.Item>
               </List>
               <Text as="p" tone="subdued" variant="bodySm">
-                The file is semicolon-separated with German decimal commas and a
-                UTF-8 byte-order mark, so Excel opens it correctly too.
+                {t("export.how.note")}
               </Text>
             </BlockStack>
           </Card>

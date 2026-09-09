@@ -140,9 +140,172 @@ const de = {
   "conn.profiles.detail":
     "Der Benutzer benötigt mindestens: Kontakte (Bearbeiten), Datenimport (Bearbeiten), Angebote/Aufträge/Lieferscheine/Rechnungen (Bearbeiten) sowie Stammdaten · Steuermatrix (Anzeigen). Fehlt ein Recht, benennt die Fehlermeldung das fehlende Profil.",
 
+  // --- mapping ---
+  "map.title": "Zuordnung",
+  "map.subtitle": "Wie Shopify-Daten in {org} zu Buchhaltungsdaten werden",
+  "map.needConnection": "Bitte zuerst Scopevisio verbinden",
+  "map.needConnection.detail":
+    "Die Zuordnung wird aus Ihren eigenen Scopevisio-Stammdaten aufgebaut — dafür muss die Verbindung bestehen.",
+  "map.saved": "Zuordnung gespeichert.",
+  "map.saveFailed": "Zuordnung konnte nicht gespeichert werden.",
+  "map.matrixError": "Steuermatrix konnte nicht gelesen werden",
+  "map.matrixError.detail":
+    "Dem Schnittstellen-Benutzer fehlt wahrscheinlich das Profil „Stammdaten · Steuermatrix (Anzeigen)“. Ohne Zugriff lassen sich keine Steuersachverhalte auswählen.",
+  "map.notReady": "Noch nicht bereit zur Synchronisierung",
+  "map.stale":
+    "Angezeigt werden zwischengespeicherte Stammdaten — Scopevisio war gerade nicht erreichbar. Bitte vor dem Verlassen aktualisieren.",
+  "map.sync": "Synchronisierung",
+  "map.sync.enable": "Bezahlte Aufträge an Scopevisio senden",
+  "map.sync.enable.help":
+    "Solange dies aus ist, werden Aufträge hier erfasst, aber nichts an Scopevisio übertragen.",
+  "map.sync.autoPost": "Belege automatisch buchen",
+  "map.sync.autoPost.help":
+    "Lassen Sie dies zunächst aus. Rechnungen werden dann angelegt und geprüft, das Buchen bleibt bei Ihnen — Buchen lässt sich nicht rückgängig machen.",
+  "map.sync.autoPost.warning":
+    "Gebuchte Belege sind nach GoBD unveränderlich. Eine Fehlbuchung lässt sich nur per Gutschrift korrigieren, nicht löschen. Schalten Sie dies ein, wenn die Prüfliste eine Weile leer geblieben ist.",
+  "map.customers": "Kunden",
+  "map.customers.detail":
+    "Neue Kunden werden in Scopevisio als Debitoren angelegt. Kundengruppen werden automatisch erzeugt, falls sie noch nicht existieren — Sie können sie also frei benennen.",
+  "map.customers.group": "Kundengruppe",
+  "map.customers.group.help": "Für Käufer mit Shopify-Konto.",
+  "map.customers.guestGroup": "Kundengruppe für Gäste",
+  "map.customers.guestGroup.help":
+    "Für Gastbestellungen, damit Sie sie im Debitorenstamm herausfiltern können.",
+  "map.customers.range": "Debitoren-Nummernkreis",
+  "map.customers.range.help": "Optional. Leer lassen für Ihren Standardkreis.",
+  "map.customers.cpd": "Gäste über Conto pro Diverse buchen",
+  "map.customers.cpd.help":
+    "Empfohlen. Name und Adresse des Käufers stehen weiterhin auf dem Beleg, Ihr Debitorenstamm füllt sich aber nicht mit Einmalkunden.",
+  "map.tax": "Steuersachverhalte",
+  "map.tax.detail":
+    "Die App rechnet die Umsatzsteuer nicht aus. Sie entscheidet, welcher dieser Fälle vorliegt, und fragt dann Scopevisio, welches Erlöskonto und welcher Steuerschlüssel dafür laut Ihrer Steuermatrix gelten — für dieses Zielland und dieses Datum. Ein nicht zugeordneter Fall führt dazu, dass passende Aufträge zurückgehalten statt geraten werden.",
+  "map.tax.homeCountry": "Ihr Land der Besteuerung",
+  "map.tax.homeCountry.help": "Zweistelliger Ländercode, z. B. DE.",
+  "map.tax.tolerance": "Toleranz beim Steuervergleich (Cent)",
+  "map.tax.tolerance.help":
+    "Wie weit die von Shopify und von Scopevisio errechnete Steuer abweichen darf, bevor ein Auftrag zurückgehalten wird. Nur für Rundungen.",
+  "map.tax.oss": "Wir sind für OSS registriert (oder über der 10.000-€-Grenze)",
+  "map.tax.oss.help":
+    "Legt fest, ob EU-Privatverkäufe Ihre inländische oder die Umsatzsteuer des Ziellandes tragen.",
+  "map.tax.noScopes":
+    "Für Ihre Scopevisio-Organisation wurden keine aktiven Steuersachverhalte geliefert. Bitte Stammdaten aktualisieren oder die Steuermatrix prüfen.",
+  "map.delivery": "Wie Rechnungen nach Scopevisio gelangen",
+  "map.delivery.label": "Übertragung",
+  "map.delivery.csv": "CSV-Datei, Import in Scopevisio (empfohlen)",
+  "map.delivery.api": "Direkter API-Import — derzeit nicht verfügbar",
+  "map.delivery.help":
+    "Per CSV entstehen echte Abrechnungsbelege, die die Faktura versenden kann. Sie importieren eine Datei je Stapel und ordnen die Spalten einmal zu.",
+  "map.delivery.apiWarning": "Direkter Import funktioniert noch nicht",
+  "map.delivery.apiWarning.detail":
+    "Die Belegimport-Schnittstelle von Scopevisio erwartet ein nicht dokumentiertes XML-Format und weist Belege stillschweigend ab. Mit dieser Auswahl wird jeder Auftrag zurückgehalten statt übertragen. Bitte bei CSV bleiben, bis das geklärt ist.",
+  "map.documents": "Belege",
+  "map.documents.copyVat": "Steuerschlüssel und Steuersatz aus dem Scopevisio-Artikelstamm übernehmen",
+  "map.documents.copyVat.help":
+    "Empfohlen. Scopevisio ermittelt den Steuerschlüssel dann selbst — so bleibt eine Quelle der Wahrheit.",
+  "map.documents.copyAccounts": "Erlöskonto aus dem Scopevisio-Artikelstamm übernehmen",
+  "map.documents.copyAccounts.help": "Empfohlen, aus demselben Grund.",
+  "map.documents.template": "PDF-Vorlage (optional)",
+  "map.documents.template.help":
+    "Name einer Scopevisio-Exportvorlage, wenn zu jeder Rechnung ein PDF erzeugt werden soll.",
+  "map.save": "Zuordnung speichern",
+  "map.masterData": "Stammdaten",
+  "map.masterData.detail":
+    "Steuersachverhalte und Erlöskonten werden aus Ihrer Scopevisio-Organisation gelesen und 30 Minuten zwischengespeichert. Nach Änderungen an der Steuermatrix aktualisieren — und mit der Prüfung sehen, welche Zielländer Ihre Steuermatrix tatsächlich buchen kann, bevor Sie die Synchronisierung einschalten.",
+  "map.readiness.run": "Prüfen, was tatsächlich gebucht wird",
+  "map.masterData.refresh": "Stammdaten aktualisieren",
+  "map.readiness.title": "Wird das tatsächlich gebucht?",
+  "map.readiness.count": "{ready} von {total} bereit",
+  "map.readiness.fromOrders":
+    "Geprüft gegen Ihre eigene Steuermatrix, mit den Ländern, in die Ihre Aufträge tatsächlich gehen.",
+  "map.readiness.fromDefaults":
+    "Geprüft gegen Ihre eigene Steuermatrix, mit typischen Zielländern, bis echte Aufträge vorliegen.",
+  "map.readiness.ready": "Bereit",
+  "map.readiness.willHold": "Wird zurückgehalten",
+  "map.readiness.footnote":
+    "„Wird zurückgehalten“ ist kein Fehler der App — es bedeutet, dass Ihre Steuermatrix für diese Fälle kein Konto vorsieht und deshalb nicht falsch gebucht wird.",
+  "map.why.title": "Warum die Umsatzsteuer nicht von Shopify übernommen wird",
+  "map.why.detail":
+    "Eine Position mit 0 % kann eine innergemeinschaftliche Lieferung, ein Drittlandsexport, ein Reverse-Charge-Fall oder eine Kleinunternehmer-Regelung sein. Das sind vier verschiedene Steuersachverhalte, vier UStVA-Zeilen und vier Erlöskonten — der Rechtsgrund lässt sich aus der Zahl nicht zurückgewinnen. Der von Shopify berechnete Betrag dient daher nur als Gegenprüfung vor dem Buchen.",
+
+  // --- orders ---
+  "orders.title": "Aufträge mit Entscheidungsbedarf",
+  "orders.subtitle": "{booked} gebucht · {waiting} offen · {declined} abgelehnt",
+  "orders.check.title": "Shopify auf bezahlte Aufträge prüfen",
+  "orders.check.detail":
+    "Aufträge kommen normalerweise von selbst. Nutzen Sie dies, um Versäumtes nachzuholen — etwa während Scopevisio nicht erreichbar war.",
+  "orders.check.button": "Jetzt prüfen",
+  "orders.check.none": "Keine neuen bezahlten Aufträge seit der letzten Prüfung.",
+  "orders.check.result":
+    "{scanned} bezahlte(r) Auftrag/Aufträge gefunden — {prepared} vorbereitet, {held} mit Entscheidungsbedarf, {skipped} bereits erledigt.",
+  "orders.empty": "Nichts offen",
+  "orders.empty.detail":
+    "Jeder Auftrag wurde entweder gebucht oder bewusst abgelehnt. Eine leere Liste bedeutet, dass den automatischen Buchungen zu trauen ist.",
+  "orders.retry": "Erneut versuchen",
+  "orders.decline": "Wird nicht gebucht",
+  "orders.decline.why": "Warum nicht?",
+  "orders.decline.why.help": "Wird für die Nachvollziehbarkeit im Protokoll vermerkt.",
+  "orders.decline.confirm": "Bestätigen",
+  "orders.decline.needReason": "Bitte begründen, warum dieser Auftrag nicht gebucht wird.",
+  "orders.decline.done": "Vermerkt — dieser Auftrag wird nicht gebucht.",
+  "orders.retry.gone": "Shopify liefert diesen Auftrag nicht mehr.",
+  "orders.retry.prepared": "Vorbereitet — jetzt auf der Export-Seite.",
+  "orders.tax.shopify": "Steuer laut Shopify",
+  "orders.tax.erp": "Steuer laut Scopevisio",
+  "orders.tax.diff": "Differenz",
+  "orders.doc.unposted": "Scopevisio-Beleg {n} existiert, ist aber nicht gebucht.",
+  "orders.attempts": "{n} Versuche.",
+
+  // --- export ---
+  "export.title": "Export nach Scopevisio",
+  "export.subtitle": "Vorbereitete Rechnungen für {org}",
+  "export.subtitle.plain": "Vorbereitete Rechnungen",
+  "export.ready": "{n} Rechnung(en) bereit",
+  "export.vatResolved": "Steuer ermittelt",
+  "export.ready.detail":
+    "Für jede davon ist der Kunde als Debitor angelegt und Erlöskonto sowie Steuerschlüssel sind aus Ihrer Steuermatrix ermittelt. Datei herunterladen, dann in Scopevisio unter Abrechnung → Abrechnungsbelege importieren. Die Spalten ordnen Sie einmal zu; das Ergebnis ist eine normale Faktura, die Sie versenden können.",
+  "export.download": "CSV herunterladen ({n})",
+  "export.download.note":
+    "Mit dem Herunterladen gelten diese als exportiert und erscheinen nicht in der nächsten Datei — ein doppelter Import würde doppelte Rechnungen erzeugen.",
+  "export.awaiting.title": "Wartet auf Ihre Bestätigung",
+  "export.awaiting.detail":
+    "Diese Stapel wurden heruntergeladen. Die App kann nicht sehen, ob Scopevisio den Import angenommen hat — teilen Sie es mit, damit die Nachvollziehbarkeit erhalten bleibt.",
+  "export.confirm": "Erfolgreich importiert",
+  "export.again": "Erneut herunterladen",
+  "export.failed": "Import fehlgeschlagen",
+  "export.failed.why": "Was ist schiefgelaufen?",
+  "export.failed.why.help":
+    "Wird im Protokoll vermerkt, und die Rechnungen gehen zurück in die Warteschlange.",
+  "export.failed.confirm": "Zurück in die Warteschlange",
+  "export.failed.needReason": "Bitte angeben, was beim Import schiefgelaufen ist.",
+  "export.confirmed": "{n} Rechnung(en) als in Scopevisio gebucht markiert.",
+  "export.returned": "{n} Rechnung(en) zurück in die Warteschlange gelegt.",
+  "export.empty": "Nichts zu exportieren",
+  "export.empty.detail":
+    "Bezahlte Aufträge erscheinen hier, sobald die App sie vorbereitet hat. Fehlt etwas, sehen Sie unter Aufträge nach — vielleicht wartet einer auf eine Entscheidung.",
+  "export.apiMode": "Übertragung steht auf direktem API-Import",
+  "export.apiMode.detail":
+    "Diese Seite gilt nur für den CSV-Modus. Der direkte Belegimport ist derzeit nicht verfügbar, daher werden Aufträge zurückgehalten. Bitte die Übertragung auf der Seite Zuordnung wieder auf CSV stellen.",
+  "export.how": "So importieren Sie in Scopevisio",
+  "export.how.1": "Scopevisio öffnen → Abrechnung → Abrechnungsbelege.",
+  "export.how.2": "Import wählen und die heruntergeladene CSV auswählen.",
+  "export.how.3":
+    "Spalten zuordnen — die Überschriften verwenden bereits die Scopevisio-Feldnamen, meist ist es eins zu eins. Die Zuordnung wird gespeichert.",
+  "export.how.4": "Die importierten Belege prüfen, dann hier bestätigen.",
+  "export.how.note":
+    "Die Datei ist semikolongetrennt mit deutschem Dezimalkomma und UTF-8-Kennzeichnung, öffnet also auch in Excel korrekt.",
+
+  // --- journal ---
+  "journal.title": "Protokoll",
+  "journal.subtitle":
+    "Alles, was die App getan hat, neueste zuerst. Einträge werden nie geändert oder gelöscht.",
+  "journal.empty": "Noch nichts passiert",
+  "journal.empty.detail":
+    "Sobald Scopevisio verbunden und die Synchronisierung eingeschaltet ist, werden hier jede Buchung und jeder zurückgehaltene Beleg vermerkt.",
+
   // --- shared ---
   "common.notConfigured": "— nicht konfiguriert —",
   "common.save": "Speichern",
+  "common.error": "Etwas ist schiefgelaufen.",
   "common.cancel": "Abbrechen",
 } as const;
 
@@ -259,8 +422,167 @@ const en: Record<TranslationKey, string> = {
   "conn.profiles.detail":
     "The connector user needs at least: Kontakte (Bearbeiten), Datenimport (Bearbeiten), Angebote/Aufträge/Lieferscheine/Rechnungen (Bearbeiten), and Stammdaten · Steuermatrix (Anzeigen). If a sync fails with a permissions error, the message will name the profile that is missing.",
 
-  "common.notConfigured": "— not configured —",
+  "map.title": "Mapping",
+  "map.subtitle": "How Shopify data becomes accounting data in {org}",
+  "map.needConnection": "Connect Scopevisio first",
+  "map.needConnection.detail":
+    "The mapping is built from your own Scopevisio master data, so the connection has to exist before it can be configured.",
+  "map.saved": "Mapping saved.",
+  "map.saveFailed": "Could not save the mapping.",
+  "map.matrixError": "Could not read your Steuermatrix",
+  "map.matrixError.detail":
+    "The connector user probably lacks the \u201cStammdaten \u00b7 Steuermatrix (Anzeigen)\u201d profile. Tax cases cannot be chosen until this works.",
+  "map.notReady": "Not ready to sync yet",
+  "map.stale":
+    "Showing cached master data \u2014 Scopevisio could not be reached just now. Refresh before relying on these choices.",
+  "map.sync": "Sync",
+  "map.sync.enable": "Send paid orders to Scopevisio",
+  "map.sync.enable.help":
+    "While this is off, orders are still recorded here but nothing reaches Scopevisio.",
+  "map.sync.autoPost": "Post documents automatically",
+  "map.sync.autoPost.help":
+    "Leave this off to begin with. Invoices are then created and checked but left for you to post \u2014 posting cannot be undone.",
+  "map.sync.autoPost.warning":
+    "Posted documents are immutable under GoBD. A wrong posting can only be corrected with a credit note, never deleted. Turn this on once the review queue has been empty for a while.",
+  "map.customers": "Customers",
+  "map.customers.detail":
+    "New customers are created in Scopevisio as debitors. Customer groups are created automatically if they do not exist yet, so you can name them whatever suits your reporting.",
+  "map.customers.group": "Customer group (Kundengruppe)",
+  "map.customers.group.help": "For buyers with a Shopify account.",
+  "map.customers.guestGroup": "Guest customer group",
+  "map.customers.guestGroup.help":
+    "For guest checkouts, so you can filter them out of your debitor master.",
+  "map.customers.range": "Debitor number range (Nummernkreis)",
+  "map.customers.range.help": "Optional. Leave empty to use your default range.",
+  "map.customers.cpd": "Book guests against a Conto pro Diverse account",
+  "map.customers.cpd.help":
+    "Recommended. The buyer\u2019s real name and address still appear on the document, but your debitor master does not fill up with one-off customers.",
+  "map.tax": "Tax cases (Steuersachverhalte)",
+  "map.tax.detail":
+    "The connector does not calculate VAT. It decides which of these cases an order falls into, then asks Scopevisio which Erl\u00f6skonto and Steuerschl\u00fcssel your own Steuermatrix prescribes for that case, destination and date. Any case left unconfigured causes matching orders to be held rather than guessed at.",
+  "map.tax.homeCountry": "Your country of taxation",
+  "map.tax.homeCountry.help": "Two-letter country code, e.g. DE.",
+  "map.tax.tolerance": "Tax comparison tolerance (cents)",
+  "map.tax.tolerance.help":
+    "How far Shopify\u2019s VAT and Scopevisio\u2019s may differ before an order is held. Rounding only.",
+  "map.tax.oss": "We are registered for OSS (or above the \u20ac10,000 EU threshold)",
+  "map.tax.oss.help":
+    "Determines whether EU consumer sales carry your domestic VAT or the destination country\u2019s.",
+  "map.tax.noScopes":
+    "No active tax cases were returned from your Scopevisio organisation. Refresh the master data, or check that your Steuermatrix is configured.",
+  "map.delivery": "How invoices reach Scopevisio",
+  "map.delivery.label": "Delivery",
+  "map.delivery.csv": "CSV file, imported in Scopevisio (recommended)",
+  "map.delivery.api": "Direct API import \u2014 not currently available",
+  "map.delivery.help":
+    "CSV produces real Abrechnungsbelege that the Faktura module can send. You import one file per batch and map the columns once.",
+  "map.delivery.apiWarning": "Direct import does not work yet",
+  "map.delivery.apiWarning.detail":
+    "Scopevisio\u2019s document-import endpoint accepts an XML format that is not documented, and it rejects documents silently. With this selected every order will be held instead of delivered. Use CSV until that is resolved.",
+  "map.documents": "Documents",
+  "map.documents.copyVat": "Take the tax key and rate from the Scopevisio product master",
+  "map.documents.copyVat.help":
+    "Recommended. Scopevisio then derives the Steuerschl\u00fcssel itself, which keeps one source of truth.",
+  "map.documents.copyAccounts": "Take the revenue account from the Scopevisio product master",
+  "map.documents.copyAccounts.help": "Recommended, for the same reason.",
+  "map.documents.template": "PDF template (optional)",
+  "map.documents.template.help":
+    "Name of a Scopevisio export template, if you want a PDF generated with each invoice.",
+  "map.save": "Save mapping",
+  "map.masterData": "Master data",
+  "map.masterData.detail":
+    "Tax cases and revenue accounts are read from your Scopevisio organisation and cached for 30 minutes. Refresh after changing your Steuermatrix, and use the check to see which destinations it can actually book before you switch sync on.",
+  "map.readiness.run": "Check what will actually book",
+  "map.masterData.refresh": "Refresh master data",
+  "map.readiness.title": "Will this actually book?",
+  "map.readiness.count": "{ready} of {total} ready",
+  "map.readiness.fromOrders":
+    "Checked against your own Steuermatrix, using the countries your orders actually ship to.",
+  "map.readiness.fromDefaults":
+    "Checked against your own Steuermatrix, using representative destinations until real orders arrive.",
+  "map.readiness.ready": "Ready",
+  "map.readiness.willHold": "Will be held",
+  "map.readiness.footnote":
+    "A case marked \u201cwill be held\u201d is not a fault in the connector \u2014 it means your Steuermatrix has nothing to book those orders to, so they are held rather than booked wrongly.",
+  "map.why.title": "Why VAT is not read from Shopify",
+  "map.why.detail":
+    "A 0% line could be an intra-EU B2B supply, a third-country export, a reverse-charge supply or a small-business exemption. Those are four different Steuersachverhalte, four UStVA lines and four revenue accounts \u2014 the legal reason cannot be recovered from the number. So Shopify\u2019s calculated tax is only ever used as a cross-check before posting.",
+
+  "orders.title": "Orders needing a decision",
+  "orders.subtitle": "{booked} booked \u00b7 {waiting} waiting \u00b7 {declined} declined",
+  "orders.check.title": "Check Shopify for paid orders",
+  "orders.check.detail":
+    "Orders normally arrive on their own. Use this to pull in anything missed \u2014 for example while Scopevisio was unreachable.",
+  "orders.check.button": "Check now",
+  "orders.check.none": "No new paid orders since the last check.",
+  "orders.check.result":
+    "{scanned} paid order(s) found \u2014 {prepared} prepared, {held} need a decision, {skipped} already handled.",
+  "orders.empty": "Nothing waiting",
+  "orders.empty.detail":
+    "Every order was either booked or deliberately declined. An empty queue means the automatic bookings can be trusted.",
+  "orders.retry": "Try again",
+  "orders.decline": "Will not be booked",
+  "orders.decline.why": "Why not?",
+  "orders.decline.why.help": "Recorded in the journal for the audit trail.",
+  "orders.decline.confirm": "Confirm",
+  "orders.decline.needReason": "Please say why this order will not be booked.",
+  "orders.decline.done": "Recorded \u2014 this order will not be booked.",
+  "orders.retry.gone": "Shopify no longer returns this order.",
+  "orders.retry.prepared": "Prepared \u2014 it is now on the Export page.",
+  "orders.tax.shopify": "Shopify VAT",
+  "orders.tax.erp": "Scopevisio VAT",
+  "orders.tax.diff": "Difference",
+  "orders.doc.unposted": "Scopevisio document {n} exists but is not posted.",
+  "orders.attempts": "Tried {n} times.",
+
+  "export.title": "Export to Scopevisio",
+  "export.subtitle": "Prepared invoices for {org}",
+  "export.subtitle.plain": "Prepared invoices",
+  "export.ready": "{n} invoice(s) ready",
+  "export.vatResolved": "VAT resolved",
+  "export.ready.detail":
+    "Each of these has its customer set up as a debitor and its Erl\u00f6skonto and Steuerschl\u00fcssel already resolved from your Steuermatrix. Download the file, then in Scopevisio go to Abrechnung \u2192 Abrechnungsbelege and import it. You map the columns once; the result is a normal Faktura you can send.",
+  "export.download": "Download CSV ({n})",
+  "export.download.note":
+    "Downloading marks these as exported so the next file will not contain them again \u2014 importing the same batch twice would create duplicate invoices.",
+  "export.awaiting.title": "Waiting for your confirmation",
+  "export.awaiting.detail":
+    "These batches have been downloaded. The connector cannot see whether Scopevisio accepted the import, so tell it what happened \u2014 that is what keeps the audit trail honest.",
+  "export.confirm": "Imported successfully",
+  "export.again": "Download again",
+  "export.failed": "Import failed",
+  "export.failed.why": "What went wrong?",
+  "export.failed.why.help":
+    "Recorded in the journal, and the invoices go back in the queue.",
+  "export.failed.confirm": "Return to queue",
+  "export.failed.needReason": "Please say what went wrong with the import.",
+  "export.confirmed": "{n} invoice(s) marked as booked in Scopevisio.",
+  "export.returned": "{n} invoice(s) returned to the queue.",
+  "export.empty": "Nothing to export",
+  "export.empty.detail":
+    "Paid orders appear here once the connector has prepared them. If you expected something, check the Orders page \u2014 an order may be waiting on a decision.",
+  "export.apiMode": "Delivery mode is set to direct API import",
+  "export.apiMode.detail":
+    "This page only applies in CSV mode. Direct document import is not currently available, so orders will be held instead. Switch delivery back to CSV on the Mapping page.",
+  "export.how": "How to import in Scopevisio",
+  "export.how.1": "Open Scopevisio \u2192 Abrechnung \u2192 Abrechnungsbelege.",
+  "export.how.2": "Choose Import and select the downloaded CSV.",
+  "export.how.3":
+    "Map the columns \u2014 the headers already use Scopevisio field names, so this is usually one-to-one. The mapping is saved for next time.",
+  "export.how.4": "Check the imported Belege, then come back here and confirm.",
+  "export.how.note":
+    "The file is semicolon-separated with German decimal commas and a UTF-8 byte-order mark, so Excel opens it correctly too.",
+
+  "journal.title": "Journal",
+  "journal.subtitle":
+    "Everything the connector did, newest first. Entries are never changed or removed.",
+  "journal.empty": "Nothing has happened yet",
+  "journal.empty.detail":
+    "Once Scopevisio is connected and sync is on, every booking and every held document will be recorded here.",
+
+  "common.notConfigured": "\u2014 not configured \u2014",
   "common.save": "Save",
+  "common.error": "Something went wrong.",
   "common.cancel": "Cancel",
 };
 

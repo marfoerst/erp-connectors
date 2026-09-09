@@ -29,6 +29,7 @@ import {
 import { getVatScopes, refreshAllMasterData } from "../scopevisio/masterdata.server";
 import { checkReadiness } from "../scopevisio/readiness.server";
 import { SCOPE_FIELDS, TAX_CASE_LABEL } from "../scopevisio/constants";
+import { makeT, resolveLocale } from "../i18n";
 
 /**
  * PRD C-002 — the merchant reviews and sets the mapping before anything is
@@ -41,8 +42,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const connection = await getConnection(session.shop);
 
+  const locale = resolveLocale(new URL(request.url).searchParams.get("locale"));
+
   if (!connection) {
-    return { connected: false as const };
+    return { connected: false as const, locale };
   }
 
   let vatScopes: Array<{ caseId: number; caseName: string }> = [];
@@ -55,13 +58,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     stale = res.stale;
   } catch (err) {
     masterDataError =
-      err instanceof Error ? err.message : "Could not read your Steuermatrix.";
+      err instanceof Error ? err.message : "Steuermatrix";
   }
 
   const settings = connection.settings;
 
   return {
     connected: true as const,
+    locale,
     organisation: connection.organisation,
     vatScopes,
     masterDataError,
@@ -103,6 +107,7 @@ export const action = async ({
   request,
 }: ActionFunctionArgs): Promise<MappingActionResult> => {
   const { session } = await authenticate.admin(request);
+  const t = makeT(resolveLocale(new URL(request.url).searchParams.get("locale")));
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "save");
 
@@ -119,7 +124,7 @@ export const action = async ({
       return {
         ok: result.errors.length === 0,
         message: result.errors.length
-          ? `Master data partly refreshed. ${result.errors.join("; ")}`
+          ? `${t("map.masterData")}: ${result.errors.join("; ")}`
           : `Refreshed: ${result.vatScopes} tax cases, ${result.vatMatrix} matrix entries, ${result.revenueAccounts} revenue accounts.`,
       };
     }
@@ -154,11 +159,11 @@ export const action = async ({
       deliveryMode: String(form.get("deliveryMode") ?? "csv") === "api" ? "api" : "csv",
     });
 
-    return { ok: true, message: "Mapping saved." };
+    return { ok: true, message: t("map.saved") };
   } catch (err) {
     return {
       ok: false,
-      message: err instanceof Error ? err.message : "Could not save the mapping.",
+      message: err instanceof Error ? err.message : t("map.saveFailed"),
     };
   }
 };
@@ -202,12 +207,9 @@ export default function MappingPage() {
 
   if (!data.connected) {
     return (
-      <Page title="Mapping">
-        <Banner tone="warning" title="Connect Scopevisio first">
-          <p>
-            The mapping is built from your own Scopevisio master data, so the
-            connection has to exist before it can be configured.
-          </p>
+      <Page title={makeT(data.locale)("map.title")}>
+        <Banner tone="warning" title={makeT(data.locale)("map.needConnection")}>
+          <p>{makeT(data.locale)("map.needConnection.detail")}</p>
         </Banner>
       </Page>
     );
@@ -221,6 +223,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
   const formRef = useRef<HTMLFormElement>(null);
+  const t = makeT(data.locale);
 
   const s = data.settings;
   const [syncEnabled, setSyncEnabled] = useState(s?.syncEnabled ?? false);
@@ -322,8 +325,8 @@ function MappingEditor({ data }: { data: ConnectedData }) {
 
   return (
     <Page
-      title="Mapping"
-      subtitle={`How Shopify data becomes accounting data in ${data.organisation}`}
+      title={t("map.title")}
+      subtitle={t("map.subtitle", { org: data.organisation })}
     >
       {/* `open` is the documented API — the wrapper calls show()/hide() itself.
           Driving the element directly raced its mount effect, which hides. */}
@@ -344,18 +347,16 @@ function MappingEditor({ data }: { data: ConnectedData }) {
           </Layout.Section>
         ) : data.masterDataError ? (
           <Layout.Section>
-            <Banner tone="critical" title="Could not read your Steuermatrix">
+            <Banner tone="critical" title={t("map.matrixError")}>
               <p>{data.masterDataError}</p>
               <p>
-                The connector user probably lacks the &ldquo;Stammdaten &middot;
-                Steuermatrix (Anzeigen)&rdquo; profile. Tax cases cannot be
-                chosen until this works.
+                {t("map.matrixError.detail")}
               </p>
             </Banner>
           </Layout.Section>
         ) : data.gaps.length > 0 ? (
           <Layout.Section>
-            <Banner tone="warning" title="Not ready to sync yet">
+            <Banner tone="warning" title={t("map.notReady")}>
               <List>
                 {data.gaps.map((gap) => (
                   <List.Item key={gap}>{gap}</List.Item>
@@ -363,8 +364,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               </List>
               {data.stale && (
                 <p>
-                  Master data shown is cached — Scopevisio could not be reached
-                  just now. Refresh before relying on these choices.
+                  {t("map.stale")}
                 </p>
               )}
             </Banner>
@@ -373,8 +373,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
           <Layout.Section>
             <Banner tone="warning">
               <p>
-                Showing cached master data — Scopevisio could not be reached
-                just now. Refresh below before relying on these choices.
+                {t("map.stale")}
               </p>
             </Banner>
           </Layout.Section>
@@ -386,29 +385,26 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Sync
+                    {t("map.sync")}
                   </Text>
                   <BoolField
-                    label="Send paid orders to Scopevisio"
+                    label={t("map.sync.enable")}
                     name="syncEnabled"
                     checked={syncEnabled}
                     onChange={setSyncEnabled}
-                    helpText="While this is off, orders are still recorded here but nothing reaches Scopevisio."
+                    helpText={t("map.sync.enable.help")}
                   />
                   <BoolField
-                    label="Post documents automatically"
+                    label={t("map.sync.autoPost")}
                     name="autoPost"
                     checked={autoPost}
                     onChange={setAutoPost}
-                    helpText="Leave this off to begin with. Invoices are then created and checked but left for you to post — posting cannot be undone."
+                    helpText={t("map.sync.autoPost.help")}
                   />
                   {autoPost && (
                     <Banner tone="warning">
                       <p>
-                        Posted documents are immutable under GoBD. A wrong
-                        posting can only be corrected with a credit note, never
-                        deleted. Turn this on once the review queue has been
-                        empty for a while.
+                        {t("map.sync.autoPost.warning")}
                       </p>
                     </Banner>
                   )}
@@ -418,49 +414,47 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Customers
+                    {t("map.customers")}
                   </Text>
                   <Text as="p" tone="subdued">
-                    New customers are created in Scopevisio as debitors. Customer
-                    groups are created automatically if they do not exist yet, so
-                    you can name them whatever suits your reporting.
+                    {t("map.customers.detail")}
                   </Text>
                   <FormLayout>
                     <FormLayout.Group>
                       <TextField
-                        label="Customer group (Kundengruppe)"
+                        label={t("map.customers.group")}
                         name="customerGroup"
                         value={customerGroup}
                         onChange={setCustomerGroup}
                         autoComplete="off"
-                        helpText="For buyers with a Shopify account."
+                        helpText={t("map.customers.group.help")}
                       />
                       <TextField
-                        label="Guest customer group"
+                        label={t("map.customers.guestGroup")}
                         name="guestCustomerGroup"
                         value={guestCustomerGroup}
                         onChange={setGuestCustomerGroup}
                         autoComplete="off"
-                        helpText="For guest checkouts, so you can filter them out of your debitor master."
+                        helpText={t("map.customers.guestGroup.help")}
                       />
                     </FormLayout.Group>
                     <FormLayout.Group>
                       <TextField
-                        label="Debitor number range (Nummernkreis)"
+                        label={t("map.customers.range")}
                         name="numberRangeNumber"
                         type="number"
                         value={numberRangeNumber}
                         onChange={setNumberRangeNumber}
                         autoComplete="off"
-                        helpText="Optional. Leave empty to use your default range."
+                        helpText={t("map.customers.range.help")}
                       />
                     </FormLayout.Group>
                     <BoolField
-                      label="Book guests against a Conto pro Diverse account"
+                      label={t("map.customers.cpd")}
                       name="guestUseCpd"
                       checked={guestUseCpd}
                       onChange={setGuestUseCpd}
-                      helpText="Recommended. The buyer's real name and address still appear on the document, but your debitor master does not fill up with one-off customers."
+                      helpText={t("map.customers.cpd.help")}
                     />
                   </FormLayout>
                 </BlockStack>
@@ -469,45 +463,40 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Tax cases (Steuersachverhalte)
+                    {t("map.tax")}
                   </Text>
                   <Text as="p" tone="subdued">
-                    The connector does not calculate VAT. It decides which of
-                    these cases an order falls into, then asks Scopevisio which
-                    Erlöskonto and Steuerschlüssel your own Steuermatrix
-                    prescribes for that case, destination and date. Any case left
-                    unconfigured causes matching orders to be held rather than
-                    guessed at.
+                    {t("map.tax.detail")}
                   </Text>
 
                   <FormLayout>
                     <FormLayout.Group>
                       <TextField
-                        label="Your country of taxation"
+                        label={t("map.tax.homeCountry")}
                         name="homeCountry"
                         value={homeCountry}
                         onChange={(v) => setHomeCountry(v.toUpperCase())}
                         autoComplete="off"
                         maxLength={2}
-                        helpText="Two-letter country code, e.g. DE."
+                        helpText={t("map.tax.homeCountry.help")}
                       />
                       <TextField
-                        label="Tax comparison tolerance (cents)"
+                        label={t("map.tax.tolerance")}
                         name="taxToleranceCents"
                         type="number"
                         value={tolerance}
                         onChange={setTolerance}
                         autoComplete="off"
-                        helpText="How far Shopify's VAT and Scopevisio's may differ before an order is held. Rounding only."
+                        helpText={t("map.tax.tolerance.help")}
                       />
                     </FormLayout.Group>
 
                     <BoolField
-                      label="We are registered for OSS (or above the €10,000 EU threshold)"
+                      label={t("map.tax.oss")}
                       name="ossRegistered"
                       checked={ossRegistered}
                       onChange={setOssRegistered}
-                      helpText="Determines whether EU consumer sales carry your domestic VAT or the destination country's."
+                      helpText={t("map.tax.oss.help")}
                     />
 
                     {SCOPE_FIELDS.map((f) => (
@@ -527,9 +516,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
                   {data.vatScopes.length === 0 && !data.masterDataError && (
                     <Banner tone="warning">
                       <p>
-                        No active tax cases were returned from your Scopevisio
-                        organisation. Refresh the master data, or check that your
-                        Steuermatrix is configured.
+                        {t("map.tax.noScopes")}
                       </p>
                     </Banner>
                   )}
@@ -539,26 +526,23 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    How invoices reach Scopevisio
+                    {t("map.delivery")}
                   </Text>
                   <Select
-                    label="Delivery"
+                    label={t("map.delivery.label")}
                     name="deliveryMode"
                     options={[
-                      { label: "CSV file, imported in Scopevisio (recommended)", value: "csv" },
-                      { label: "Direct API import — not currently available", value: "api" },
+                      { label: t("map.delivery.csv"), value: "csv" },
+                      { label: t("map.delivery.api"), value: "api" },
                     ]}
                     value={deliveryMode}
                     onChange={setDeliveryMode}
-                    helpText="CSV produces real Abrechnungsbelege that the Faktura module can send. You import one file per batch and map the columns once."
+                    helpText={t("map.delivery.help")}
                   />
                   {deliveryMode === "api" && (
-                    <Banner tone="critical" title="Direct import does not work yet">
+                    <Banner tone="critical" title={t("map.delivery.apiWarning")}>
                       <p>
-                        Scopevisio&rsquo;s document-import endpoint accepts an XML
-                        format that is not documented, and it rejects documents
-                        silently. With this selected every order will be held
-                        instead of delivered. Use CSV until that is resolved.
+                        {t("map.delivery.apiWarning.detail")}
                       </p>
                     </Banner>
                   )}
@@ -568,29 +552,29 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Documents
+                    {t("map.documents")}
                   </Text>
                   <BoolField
-                    label="Take the tax key and rate from the Scopevisio product master"
+                    label={t("map.documents.copyVat")}
                     name="copyVatFromProduct"
                     checked={copyVat}
                     onChange={setCopyVat}
-                    helpText="Recommended. Scopevisio then derives the Steuerschlüssel itself, which keeps one source of truth."
+                    helpText={t("map.documents.copyVat.help")}
                   />
                   <BoolField
-                    label="Take the revenue account from the Scopevisio product master"
+                    label={t("map.documents.copyAccounts")}
                     name="copyAccountsFromProduct"
                     checked={copyAccounts}
                     onChange={setCopyAccounts}
-                    helpText="Recommended, for the same reason."
+                    helpText={t("map.documents.copyAccounts.help")}
                   />
                   <TextField
-                    label="PDF template (optional)"
+                    label={t("map.documents.template")}
                     name="documentTemplate"
                     value={template}
                     onChange={setTemplate}
                     autoComplete="off"
-                    helpText="Name of a Scopevisio export template, if you want a PDF generated with each invoice."
+                    helpText={t("map.documents.template.help")}
                   />
                 </BlockStack>
               </Card>
@@ -599,7 +583,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
 
               <InlineStack gap="300">
                 <Button submit variant="primary" loading={busy}>
-                  Save mapping
+                  {t("map.save")}
                 </Button>
               </InlineStack>
             </BlockStack>
@@ -610,14 +594,10 @@ function MappingEditor({ data }: { data: ConnectedData }) {
           <Card>
             <BlockStack gap="300">
               <Text as="h3" variant="headingSm">
-                Master data
+                {t("map.masterData")}
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
-                Tax cases and revenue accounts are read from your Scopevisio
-                organisation and cached for 30 minutes. Refresh after changing
-                your Steuermatrix so the choices above stay in step, and use the
-                check to see which destinations your Steuermatrix can actually
-                book before you switch sync on.
+                {t("map.masterData.detail")}
               </Text>
               {/* Separate forms: forms cannot nest, and these are different
                   intents. Both are actions rather than loader work so the page
@@ -626,13 +606,13 @@ function MappingEditor({ data }: { data: ConnectedData }) {
                 <Form method="post">
                   <input type="hidden" name="intent" value="readiness" />
                   <Button submit loading={busy} variant="primary">
-                    Check what will actually book
+                    {t("map.readiness.run")}
                   </Button>
                 </Form>
                 <Form method="post">
                   <input type="hidden" name="intent" value="refresh" />
                   <Button submit loading={busy}>
-                    Refresh master data
+                    {t("map.masterData.refresh")}
                   </Button>
                 </Form>
               </InlineStack>
@@ -646,18 +626,17 @@ function MappingEditor({ data }: { data: ConnectedData }) {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    Will this actually book?
+                    {t("map.readiness.title")}
                   </Text>
                   <Badge tone={readiness.blockedCount === 0 ? "success" : "attention"}>
-                    {`${readiness.readyCount} of ${readiness.rows.length} ready`}
+                    {t("map.readiness.count", { ready: readiness.readyCount, total: readiness.rows.length })}
                   </Badge>
                 </InlineStack>
 
                 <Text as="p" tone="subdued">
-                  Checked against your own Steuermatrix
                   {readiness.learnedFrom === "orders"
-                    ? ", using the countries your orders actually ship to."
-                    : ", using representative destinations until real orders arrive."}
+                    ? t("map.readiness.fromOrders")
+                    : t("map.readiness.fromDefaults")}
                 </Text>
 
                 <BlockStack gap="300">
@@ -671,7 +650,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
                       <BlockStack gap="150">
                         <InlineStack gap="200" blockAlign="center">
                           <Badge tone={row.ok ? "success" : "attention"}>
-                            {row.ok ? "Ready" : "Will be held"}
+                            {row.ok ? t("map.readiness.ready") : t("map.readiness.willHold")}
                           </Badge>
                           <Text as="span" variant="headingSm">
                             {row.label}
@@ -704,9 +683,7 @@ function MappingEditor({ data }: { data: ConnectedData }) {
                 </BlockStack>
 
                 <Text as="p" tone="subdued" variant="bodySm">
-                  A case marked &ldquo;will be held&rdquo; is not a fault in the
-                  connector — it means your Steuermatrix has nothing to book
-                  those orders to, so they are held rather than booked wrongly.
+                  {t("map.readiness.footnote")}
                 </Text>
               </BlockStack>
             </Card>
@@ -718,9 +695,9 @@ function MappingEditor({ data }: { data: ConnectedData }) {
             <BlockStack gap="200">
               <InlineStack gap="200" blockAlign="center">
                 <Text as="h3" variant="headingSm">
-                  Why VAT is not read from Shopify
+                  {t("map.why.title")}
                 </Text>
-                <Badge tone="info">Design note</Badge>
+                <Badge tone="info">Info</Badge>
               </InlineStack>
               <Text as="p" tone="subdued" variant="bodySm">
                 A 0% line in Shopify could be an intra-EU B2B supply, a
