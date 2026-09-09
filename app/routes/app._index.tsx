@@ -18,6 +18,7 @@ import {
 
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
+import { makeT, resolveLocale, type Locale } from "../i18n";
 import { getConnection, missingSettings } from "../scopevisio/connection.server";
 import { orderCounts } from "../scopevisio/sync.server";
 import { recentEvents } from "../scopevisio/log.server";
@@ -34,6 +35,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return {
     shop,
+    locale: resolveLocale(new URL(request.url).searchParams.get("locale")),
     connected: Boolean(connection),
     status: connection?.status ?? "none",
     statusDetail: connection?.statusDetail ?? null,
@@ -85,28 +87,31 @@ function Onboarding({
   mappingComplete,
   syncEnabled,
   done,
+  locale,
 }: {
   connected: boolean;
   mappingComplete: boolean;
   syncEnabled: boolean;
   done: boolean;
+  locale: Locale;
 }) {
+  const t = makeT(locale);
   const steps = [
     {
-      label: "Connect your Scopevisio organisation",
-      detail: "Sign in with the credentials you already use.",
+      label: t("overview.onboarding.step1"),
+      detail: t("overview.onboarding.step1.detail"),
       complete: connected,
       url: "/app/connection",
     },
     {
-      label: "Confirm how shop data maps onto your accounts",
-      detail: "Customer groups and a Steuersachverhalt per tax case, from your own master data.",
+      label: t("overview.onboarding.step2"),
+      detail: t("overview.onboarding.step2.detail"),
       complete: mappingComplete,
       url: "/app/mapping",
     },
     {
-      label: "Switch sync on",
-      detail: "Nothing is sent to Scopevisio until you do.",
+      label: t("overview.onboarding.step3"),
+      detail: t("overview.onboarding.step3.detail"),
       complete: syncEnabled,
       url: "/app/mapping",
     },
@@ -118,17 +123,19 @@ function Onboarding({
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingMd">
-            {done ? "You are set up" : "Three steps to get started"}
+            {done ? t("overview.onboarding.done") : t("overview.onboarding.title")}
           </Text>
           <InlineStack gap="200" blockAlign="center">
             <Badge tone={done ? "success" : "attention"}>
-              {`${steps.filter((s) => s.complete).length} of 3 done`}
+              {t("overview.onboarding.progress", {
+                done: steps.filter((s) => s.complete).length,
+              })}
             </Badge>
             {done && (
               <Form method="post">
                 <input type="hidden" name="intent" value="dismissOnboarding" />
                 <Button submit variant="plain">
-                  Dismiss
+                  {t("overview.onboarding.dismiss")}
                 </Button>
               </Form>
             )}
@@ -139,7 +146,7 @@ function Onboarding({
           {steps.map((step, i) => (
             <InlineStack key={step.label} gap="300" blockAlign="start">
               <Badge tone={step.complete ? "success" : undefined}>
-                {step.complete ? "Done" : String(i + 1)}
+                {step.complete ? t("overview.step.done") : String(i + 1)}
               </Badge>
               <BlockStack gap="050">
                 <Text as="span" variant="bodyMd">
@@ -182,6 +189,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "cr
 
 export default function Overview() {
   const data = useLoaderData<typeof loader>();
+  const t = makeT(data.locale);
 
   const needsAttention = data.counts.held + data.counts.pending;
   const toExport = data.counts.ready_to_export;
@@ -189,11 +197,11 @@ export default function Overview() {
 
   return (
     <Page
-      title="Scopevisio connector"
+      title={t("overview.title")}
       subtitle={
         data.organisation
-          ? `Booking shop orders into ${data.organisation}`
-          : "Not connected yet"
+          ? t("overview.subtitle.connected", { org: data.organisation })
+          : t("overview.subtitle.disconnected")
       }
     >
       <Layout>
@@ -204,20 +212,18 @@ export default function Overview() {
               mappingComplete={data.connected && data.gaps.length === 0}
               syncEnabled={data.syncEnabled}
               done={data.onboardingDone}
+              locale={data.locale}
             />
           </Layout.Section>
         )}
 
         {data.status === "error" && (
           <Layout.Section>
-            <Banner tone="critical" title="The Scopevisio connection is not working">
+            <Banner tone="critical" title={t("overview.connection.broken")}>
               <p>{data.statusDetail}</p>
-              <p>
-                Orders are queued, not lost. Reconnect and they will be
-                processed.
-              </p>
+              <p>{t("overview.connection.broken.detail")}</p>
               <Box paddingBlockStart="300">
-                <Button url="/app/connection">Fix the connection</Button>
+                <Button url="/app/connection">{t("overview.connection.fix")}</Button>
               </Box>
             </Banner>
           </Layout.Section>
@@ -225,14 +231,14 @@ export default function Overview() {
 
         <Layout.Section>
           <InlineGrid columns={{ xs: 2, md: 4 }} gap="400">
-            <Stat label="Booked" value={data.counts.booked} tone="success" />
+            <Stat label={t("overview.stat.booked")} value={data.counts.booked} tone="success" />
             <Stat
-              label="Needs your decision"
+              label={t("overview.stat.attention")}
               value={needsAttention}
               tone={needsAttention > 0 ? "critical" : undefined}
             />
-            <Stat label="Ready to export" value={toExport} />
-            <Stat label="Awaiting confirmation" value={awaitingConfirm} />
+            <Stat label={t("overview.stat.toExport")} value={toExport} />
+            <Stat label={t("overview.stat.awaiting")} value={awaitingConfirm} />
           </InlineGrid>
         </Layout.Section>
 
@@ -242,21 +248,21 @@ export default function Overview() {
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    Current mode
+                    {t("overview.mode.title")}
                   </Text>
                   <InlineStack gap="200">
                     <Badge tone={data.syncEnabled ? "success" : "attention"}>
-                      {data.syncEnabled ? "Sync on" : "Sync off"}
+                      {data.syncEnabled ? t("overview.mode.syncOn") : t("overview.mode.syncOff")}
                     </Badge>
                     <Badge tone={data.autoPost ? "success" : "info"}>
-                      {data.autoPost ? "Posting automatically" : "Create only, you post"}
+                      {data.autoPost ? t("overview.mode.autoPost") : t("overview.mode.manualPost")}
                     </Badge>
                   </InlineStack>
                 </InlineStack>
                 <Text as="p" tone="subdued" variant="bodySm">
                   {data.autoPost
-                    ? "Invoices are posted to the ledger automatically once the tax cross-check passes. Posted documents cannot be withdrawn."
-                    : "Invoices are created and cross-checked, then left for you to post in Scopevisio. This is the safe way to start."}
+                    ? t("overview.mode.autoPost.detail")
+                    : t("overview.mode.manualPost.detail")}
                 </Text>
               </BlockStack>
             </Card>
@@ -269,17 +275,17 @@ export default function Overview() {
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">
                   {toExport > 0
-                    ? `${toExport} invoice${toExport === 1 ? "" : "s"} ready to import`
-                    : `${awaitingConfirm} batch invoice${awaitingConfirm === 1 ? "" : "s"} awaiting confirmation`}
+                    ? t("overview.export.ready", { n: toExport })
+                    : t("overview.export.awaiting", { n: awaitingConfirm })}
                 </Text>
                 <Text as="p" tone="subdued">
                   {toExport > 0
-                    ? "Customer, debitor account and VAT are already resolved. Download the file and import it in Scopevisio."
-                    : "A downloaded batch has not been confirmed yet. Tell the connector whether the import went through."}
+                    ? t("overview.export.ready.detail")
+                    : t("overview.export.awaiting.detail")}
                 </Text>
                 <Box>
                   <Button url="/app/export" variant="primary">
-                    Open Export
+                    {t("overview.export.open")}
                   </Button>
                 </Box>
               </BlockStack>
@@ -292,15 +298,14 @@ export default function Overview() {
             <Card>
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">
-                  {needsAttention} order{needsAttention === 1 ? "" : "s"} waiting for you
+                  {t("overview.attention.title", { n: needsAttention })}
                 </Text>
                 <Text as="p" tone="subdued">
-                  These were not booked because something could not be decided
-                  automatically. Each one explains what it needs.
+                  {t("overview.attention.detail")}
                 </Text>
                 <Box>
                   <Button url="/app/orders" variant="primary">
-                    Open the review queue
+                    {t("overview.attention.open")}
                   </Button>
                 </Box>
               </BlockStack>
@@ -311,16 +316,16 @@ export default function Overview() {
         {(data.supportUrl || data.privacyUrl) && (
           <Layout.Section>
             <FooterHelp>
-              Need help with a held order or a Scopevisio setting?{" "}
+              {t("overview.footer.help")}{" "}
               {data.supportUrl && (
                 <Link url={data.supportUrl} target="_blank">
-                  Contact support
+                  {t("overview.footer.support")}
                 </Link>
               )}
               {data.supportUrl && data.privacyUrl && " · "}
               {data.privacyUrl && (
                 <Link url={data.privacyUrl} target="_blank">
-                  Privacy policy
+                  {t("overview.footer.privacy")}
                 </Link>
               )}
             </FooterHelp>
@@ -333,9 +338,9 @@ export default function Overview() {
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    Latest activity
+                    {t("overview.activity.title")}
                   </Text>
-                  <RemixLink to="/app/journal">See the full journal</RemixLink>
+                  <RemixLink to="/app/journal">{t("overview.activity.all")}</RemixLink>
                 </InlineStack>
                 <BlockStack gap="200">
                   {data.events.map((e) => (

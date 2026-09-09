@@ -18,6 +18,7 @@ import {
 } from "@shopify/polaris";
 
 import { authenticate } from "../shopify.server";
+import { makeT, resolveLocale } from "../i18n";
 import {
   deleteConnection,
   getConnection,
@@ -38,6 +39,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const connection = await getConnection(session.shop);
 
   return {
+    locale: resolveLocale(new URL(request.url).searchParams.get("locale")),
     keyConfigured: encryptionKeyConfigured(),
     connection: connection
       ? {
@@ -70,6 +72,7 @@ export const action = async ({
   request,
 }: ActionFunctionArgs): Promise<ActionResult> => {
   const { session } = await authenticate.admin(request);
+  const t = makeT(resolveLocale(new URL(request.url).searchParams.get("locale")));
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "save");
 
@@ -99,16 +102,15 @@ export const action = async ({
      * organisation is intentionally absent — the token endpoint resolves it.
      */
     const fieldErrors: Record<string, string> = {};
-    if (!customer) fieldErrors.customer = "Enter your Scopevisio customer number.";
+    if (!customer) fieldErrors.customer = t("conn.field.customer.required");
     else if (!/^\d{7}$/.test(customer)) {
-      fieldErrors.customer =
-        "This is seven digits — you will find it in your Scopevisio customer portal.";
+      fieldErrors.customer = t("conn.field.customer.format");
     }
-    if (!username) fieldErrors.username = "Enter the user this app should sign in as.";
+    if (!username) fieldErrors.username = t("conn.field.username.required");
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(username)) {
-      fieldErrors.username = "Enter a valid e-mail address.";
+      fieldErrors.username = t("conn.field.username.format");
     }
-    if (!password) fieldErrors.password = "Enter the password for that user.";
+    if (!password) fieldErrors.password = t("conn.field.password.required");
 
     if (Object.keys(fieldErrors).length > 0) {
       return { ok: false, fieldErrors };
@@ -139,7 +141,8 @@ export const action = async ({
 };
 
 export default function ConnectionPage() {
-  const { connection, keyConfigured } = useLoaderData<typeof loader>();
+  const { connection, keyConfigured, locale } = useLoaderData<typeof loader>();
+  const t = makeT(locale);
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
@@ -154,14 +157,14 @@ export default function ConnectionPage() {
   const [baseUrl, setBaseUrl] = useState(connection?.baseUrl ?? DEFAULT_BASE_URL);
 
   const statusBadge = () => {
-    if (!connection) return <Badge tone="new">Not connected</Badge>;
-    if (connection.status === "connected") return <Badge tone="success">Connected</Badge>;
-    if (connection.status === "error") return <Badge tone="critical">Needs attention</Badge>;
-    return <Badge tone="attention">Unverified</Badge>;
+    if (!connection) return <Badge tone="new">{t("conn.status.notConnected")}</Badge>;
+    if (connection.status === "connected") return <Badge tone="success">{t("conn.status.connected")}</Badge>;
+    if (connection.status === "error") return <Badge tone="critical">{t("conn.status.error")}</Badge>;
+    return <Badge tone="attention">{t("conn.status.unverified")}</Badge>;
   };
 
   return (
-    <Page title="Scopevisio connection" subtitle="Where this app gets its accounting data">
+    <Page title={t("conn.title")} subtitle={t("conn.subtitle")}>
       <Layout>
         {/* BFS 4.3.4 forbids stacking banners, so exactly one is shown: the
             result of what the merchant just did takes precedence over the
@@ -170,24 +173,21 @@ export default function ConnectionPage() {
           <Layout.Section>
             <Banner
               tone={actionData.ok ? "success" : "critical"}
-              title={actionData.ok ? "Connected" : "Could not connect"}
+              title={actionData.ok ? t("conn.ok.title") : t("conn.error.title")}
             >
               <p>{actionData.message}</p>
             </Banner>
           </Layout.Section>
         ) : connection?.status === "error" && connection.statusDetail ? (
           <Layout.Section>
-            <Banner tone="warning" title="The connection stopped working">
+            <Banner tone="warning" title={t("conn.broken.title")}>
               <p>{connection.statusDetail}</p>
-              <p>
-                Orders are queued while the connection is down — nothing is lost.
-                Re-enter the password below to reconnect.
-              </p>
+              <p>{t("conn.broken.detail")}</p>
             </Banner>
           </Layout.Section>
         ) : !keyConfigured ? (
           <Layout.Section>
-            <Banner tone="critical" title="Credential encryption is not configured">
+            <Banner tone="critical" title={t("conn.key.title")}>
               <p>
                 <code>SCOPEVISIO_ENCRYPTION_KEY</code> is not set, so credentials
                 cannot be stored safely. Generate one with{" "}
@@ -204,54 +204,50 @@ export default function ConnectionPage() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    Scopevisio credentials
+                    {t("conn.credentials")}
                   </Text>
                   {statusBadge()}
                 </InlineStack>
 
                 <Text as="p" tone="subdued">
-                  These are the same credentials you use to sign in to
-                  Scopevisio. They are encrypted before being stored, and once
-                  Scopevisio issues a refresh token the password is deleted. You
-                  can revoke access at any time from your Scopevisio customer
-                  portal under Schnittstelle (OpenScope) → API Token.
+                  {t("conn.credentials.detail")}
                 </Text>
 
                 <FormLayout>
                   <FormLayout.Group>
                     <TextField
-                      label="Customer number"
+                      label={t("conn.field.customer")}
                       name="customer"
                       value={customer}
                       onChange={setCustomer}
                       autoComplete="off"
-                      helpText="Seven digits, from your Scopevisio customer portal."
+                      helpText={t("conn.field.customer.help")}
                       maxLength={7}
                       error={fieldErrors.customer}
                     />
                     <TextField
-                      label="Organisation (optional)"
+                      label={t("conn.field.organisation")}
                       name="organisation"
                       value={organisation}
                       onChange={setOrganisation}
                       autoComplete="off"
-                      helpText="Leave blank — Scopevisio works it out from your customer number and user, and we show you which one it picked. Only fill this in if your user belongs to more than one organisation."
+                      helpText={t("conn.field.organisation.help")}
                     />
                   </FormLayout.Group>
 
                   <FormLayout.Group>
                     <TextField
-                      label="User (e-mail)"
+                      label={t("conn.field.username")}
                       name="username"
                       type="email"
                       value={username}
                       onChange={setUsername}
                       autoComplete="off"
-                      helpText="We recommend a dedicated integration user rather than a personal login."
+                      helpText={t("conn.field.username.help")}
                       error={fieldErrors.username}
                     />
                     <TextField
-                      label="Password"
+                      label={t("conn.field.password")}
                       name="password"
                       type="password"
                       value={password}
@@ -260,19 +256,19 @@ export default function ConnectionPage() {
                       error={fieldErrors.password}
                       helpText={
                         connection
-                          ? "Leave blank only if you are not changing it — re-entering it re-authorises the connection."
-                          : "Stored encrypted, then discarded once a refresh token is issued."
+                          ? t("conn.field.password.help.existing")
+                          : t("conn.field.password.help.new")
                       }
                     />
                   </FormLayout.Group>
 
                   <TextField
-                    label="API base URL"
+                    label={t("conn.field.baseUrl")}
                     name="baseUrl"
                     value={baseUrl}
                     onChange={setBaseUrl}
                     autoComplete="off"
-                    helpText="Only change this if Scopevisio has given you a different endpoint."
+                    helpText={t("conn.field.baseUrl.help")}
                   />
                 </FormLayout>
 
@@ -280,7 +276,7 @@ export default function ConnectionPage() {
 
                 <InlineStack gap="300">
                   <Button submit variant="primary" loading={busy} disabled={!keyConfigured}>
-                    {connection ? "Save and reconnect" : "Connect"}
+                    {connection ? t("conn.submit.existing") : t("conn.submit.new")}
                   </Button>
                 </InlineStack>
               </BlockStack>
@@ -293,33 +289,32 @@ export default function ConnectionPage() {
             <Card>
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">
-                  Connection health
+                  {t("conn.health")}
                 </Text>
                 <Text as="p" tone="subdued">
-                  Last checked:{" "}
-                  {connection.lastCheckAt
-                    ? new Date(connection.lastCheckAt).toLocaleString("de-DE")
-                    : "never"}
+                  {t("conn.health.lastCheck", {
+                    when: connection.lastCheckAt
+                      ? new Date(connection.lastCheckAt).toLocaleString(locale === "de" ? "de-DE" : "en-GB")
+                      : t("conn.health.never"),
+                  })}
                 </Text>
                 <InlineStack gap="300">
                   <Form method="post">
                     <input type="hidden" name="intent" value="recheck" />
                     <Button submit loading={busy}>
-                      Check now
+                      {t("conn.health.check")}
                     </Button>
                   </Form>
                   <Form method="post">
                     <input type="hidden" name="intent" value="disconnect" />
                     <Button submit tone="critical" variant="plain">
-                      Disconnect
+                      {t("conn.health.disconnect")}
                     </Button>
                   </Form>
                 </InlineStack>
                 <Box paddingBlockStart="200">
                   <Text as="p" tone="subdued" variant="bodySm">
-                    Disconnecting stops all syncing. Documents already booked in
-                    Scopevisio are untouched — they cannot be withdrawn, because
-                    posted documents are immutable under GoBD.
+                    {t("conn.health.disconnect.detail")}
                   </Text>
                 </Box>
               </BlockStack>
@@ -331,14 +326,10 @@ export default function ConnectionPage() {
           <Card>
             <BlockStack gap="200">
               <Text as="h3" variant="headingSm">
-                Which Scopevisio permissions does the connector need?
+                {t("conn.profiles.title")}
               </Text>
               <Text as="p" tone="subdued" variant="bodySm">
-                The connector user needs at least: Kontakte (Bearbeiten),
-                Datenimport (Bearbeiten), Angebote/Aufträge/Lieferscheine/
-                Rechnungen (Bearbeiten), and Stammdaten · Steuermatrix (Anzeigen).
-                If a sync fails with a permissions error, the message will name
-                the profile that is missing.
+                {t("conn.profiles.detail")}
               </Text>
               <Link
                 url="https://help.scopevisio.com/de/articles/467358-rest-api-erste-schritte"

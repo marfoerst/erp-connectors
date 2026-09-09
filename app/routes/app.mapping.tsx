@@ -284,21 +284,6 @@ function MappingEditor({ data }: { data: ConnectedData }) {
   const initial = useRef(current);
   const dirty = JSON.stringify(current) !== JSON.stringify(initial.current);
 
-  useEffect(() => {
-    const bar = document.getElementById("mapping-save-bar") as
-      | (HTMLElement & { show?: () => void; hide?: () => void })
-      | null;
-    if (!bar) return;
-    // App Bridge owns the bar; guard the calls so a non-embedded render (or an
-    // older App Bridge) degrades to the plain form rather than throwing.
-    try {
-      if (dirty) bar.show?.();
-      else bar.hide?.();
-    } catch {
-      /* not embedded */
-    }
-  }, [dirty]);
-
   // A successful save becomes the new baseline, which also hides the bar.
   useEffect(() => {
     if (actionData?.ok) initial.current = current;
@@ -340,7 +325,9 @@ function MappingEditor({ data }: { data: ConnectedData }) {
       title="Mapping"
       subtitle={`How Shopify data becomes accounting data in ${data.organisation}`}
     >
-      <SaveBar id="mapping-save-bar">
+      {/* `open` is the documented API — the wrapper calls show()/hide() itself.
+          Driving the element directly raced its mount effect, which hides. */}
+      <SaveBar id="mapping-save-bar" open={dirty}>
         <button variant="primary" onClick={onSave} disabled={busy} />
         <button onClick={onDiscard} disabled={busy} />
       </SaveBar>

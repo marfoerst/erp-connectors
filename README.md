@@ -11,6 +11,7 @@ there are deliberately no Scopevisio tenant settings in `.env`.
 - `docs/API-FINDINGS.md` — what the OpenScope REST API does and does not support
 - `docs/BUILT-FOR-SHOPIFY.md` — Built for Shopify compliance, item by item
 - `docs/DEPLOYMENT.md` — how to deploy it, and why the database must outlive the container
+- `docs/LISTING.md` — App Store listing copy (German and English), screenshots, reviewer notes
 - `docs/PRIVACY.md` — privacy policy draft, grounded in what the app actually stores
 - `docs/PROTECTED-CUSTOMER-DATA.md` — prepared answers for Shopify's data declaration
 
@@ -146,6 +147,19 @@ books revenue and a receivable **without producing a document** — no
 Belegnummer in the invoice range, no PDF, nothing the Faktura module can send.
 It satisfies the accounting outcome, not the customer one, so it is not wired
 into the sync flow and must not be treated as a substitute.
+
+## Languages
+
+The merchant-facing UI is **German by default**, English as a fallback, resolved
+from the `locale` Shopify passes. German is not an afterthought: every user is a
+German-market bookkeeper, and the App Store rule is that a listing may only
+claim languages the UI actually supports.
+
+Strings live in `app/i18n.ts` as a typed dictionary — a missing key is a
+compile error, not a silently blank sentence. Polaris gets its own `de.json` so
+built-in component labels are not left in English. The accounting terms
+(Erlöskonto, Steuerschlüssel, Abrechnungsbelege) stay German in both locales
+because they have no useful English equivalent in this context.
 
 ## Order intake — two paths, deliberately
 
