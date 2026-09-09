@@ -10,7 +10,15 @@ generator client {
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
   provider = "sqlite"
-  url      = "file:dev.sqlite"
+  // Env-driven so production can point at a persistent volume instead of a
+  // path inside the container image.
+  //
+  // ⚠️ PRODUCTION: a SQLite file baked into the image is lost on every
+  // redeploy, and losing OrderSync loses the idempotency guard — which means
+  // orders get booked a second time. Under GoBD a duplicate posting cannot be
+  // withdrawn, only corrected with a credit note. So production MUST use either
+  // a persistent volume or Postgres. See docs/DEPLOYMENT.md.
+  url      = env("DATABASE_URL")
 }
 
 model Session {
