@@ -7,6 +7,11 @@ debitor and the VAT treatment taken from the merchant's own Steuermatrix.
 The only environment variable the connector itself needs is an encryption key —
 there are deliberately no Scopevisio tenant settings in `.env`.
 
+**Picking this up after a break? Start with `docs/STATUS.md`** — what works,
+what is blocked on whom, the decisions already made, and the traps that already
+cost time.
+
+- `docs/STATUS.md` — **state and handover; read this first**
 - `docs/PRD.md` — the product requirements: problem, outcomes, capabilities, metrics
 - `docs/API-FINDINGS.md` — what the OpenScope REST API does and does not support
 - `docs/BUILT-FOR-SHOPIFY.md` — Built for Shopify compliance, item by item
@@ -193,22 +198,26 @@ npm run e2e:orders  # 5 tax cases + contact idempotency
 
 ## Known gaps
 
-1. **Order webhooks are disabled pending Shopify approval** — but intake is
+1. **Listing screenshots are 1568×773; Shopify wants ≥1600×900.** Re-capture
+   before uploading — `assets/screenshots/README.md` has the command. They were
+   produced from a dev-only harness because `admin.shopify.com` is blocked on
+   the dev machine, so they show the app surface without the admin frame.
+2. **Order webhooks are disabled pending Shopify approval** — but intake is
    not blocked, because polling covers it (see above). To enable the fast path:
    Partner Dashboard → API access → Protected customer data access (Level 1 +
    Name, Address, Email), then uncomment both `[[webhooks.subscriptions]]`
    blocks in `shopify.app.toml`. The handlers are written and tested.
-2. **The invoice import XML schema is unknown**, so `deliveryMode: "api"` does
+3. **The invoice import XML schema is unknown**, so `deliveryMode: "api"` does
    not work. Established by testing on 2026-09-08: the payload must be XML
    (non-XML gives `400 "data: must be a valid XML document"`), 29 well-formed
    structural variants were all silently ignored (HTTP 200, `invoices: []`),
    and there is no JSON create endpoint for any billing document. Needs the
    schema or one sample from whoever owns OpenScope — it is not derivable by
    experiment because failures are silent. CSV delivery is unaffected.
-3. **Stock sync is not implemented and cannot be.** The OpenScope API exposes no
+4. **Stock sync is not implemented and cannot be.** The OpenScope API exposes no
    stock-level read — see `docs/API-FINDINGS.md` §10 and OQ-1.
-4. **Scopevisio has no webhooks**, so any ERP→Shopify direction would require
+5. **Scopevisio has no webhooks**, so any ERP→Shopify direction would require
    polling.
-5. The Scopevisio permission model for a connector user is not yet confirmed
+6. The Scopevisio permission model for a connector user is not yet confirmed
    (OQ-2); a missing profile currently surfaces as a merchant-actionable error
    naming the profile.

@@ -81,6 +81,13 @@ Needed if you ever want more than one machine, or prefer managed backups.
 Do this before launch if multi-instance matters; the schema is small and there
 is no production data to migrate yet.
 
+## Before the first production deploy
+
+`app/routes/screenshots.$view.tsx` is a listing-screenshot harness. It already
+returns 404 when `NODE_ENV=production`, but confirm that holds in your
+environment — it renders app-like screens with no authentication, so it must
+never be reachable in production.
+
 ## Health check
 
 `/healthz` is unauthenticated and queries the database, because the failure that

@@ -3,7 +3,6 @@ import { useLoaderData } from "@remix-run/react";
 import {
   AppProvider as PolarisAppProvider,
   Badge,
-  Banner,
   BlockStack,
   Box,
   Button,
