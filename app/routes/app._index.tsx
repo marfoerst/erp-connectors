@@ -9,7 +9,9 @@ import {
   Card,
   InlineGrid,
   InlineStack,
+  FooterHelp,
   Layout,
+  Link,
   Page,
   Text,
 } from "@shopify/polaris";
@@ -45,6 +47,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         connection.settings.syncEnabled,
     ),
     onboardingDismissed: Boolean(connection?.settings?.onboardingDismissedAt),
+    // The App Store requires a reachable support contact and privacy policy.
+    // Kept in the environment so the URLs can change without a code deploy.
+    supportUrl: process.env.SUPPORT_URL || "",
+    privacyUrl: process.env.PRIVACY_POLICY_URL || "",
     autoPost: connection?.settings?.autoPost ?? false,
     gaps: connection ? missingSettings(connection.settings) : [],
     counts,
@@ -299,6 +305,25 @@ export default function Overview() {
                 </Box>
               </BlockStack>
             </Card>
+          </Layout.Section>
+        )}
+
+        {(data.supportUrl || data.privacyUrl) && (
+          <Layout.Section>
+            <FooterHelp>
+              Need help with a held order or a Scopevisio setting?{" "}
+              {data.supportUrl && (
+                <Link url={data.supportUrl} target="_blank">
+                  Contact support
+                </Link>
+              )}
+              {data.supportUrl && data.privacyUrl && " · "}
+              {data.privacyUrl && (
+                <Link url={data.privacyUrl} target="_blank">
+                  Privacy policy
+                </Link>
+              )}
+            </FooterHelp>
           </Layout.Section>
         )}
 

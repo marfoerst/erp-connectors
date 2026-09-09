@@ -20,7 +20,7 @@ one-time gate.
 
 | # | Requirement | Status | Notes |
 |---|---|---|---|
-| 1.1.1 | Meet App Store requirements | 📋 | Code side is done: mandatory compliance webhooks, OAuth/session tokens, no theme writes. Outstanding items are all account/listing actions — privacy policy URL, support contact, listing content, and the Billing API if the app is paid (OQ-7) |
+| 1.1.1 | Meet App Store requirements | 📋 | Code side done: mandatory compliance webhooks, OAuth/session tokens, no theme writes, and support + privacy links now surfaced in the app from `SUPPORT_URL` / `PRIVACY_POLICY_URL`. A privacy policy is drafted (`docs/PRIVACY.md`) and the protected-data declaration is prepared (`docs/PROTECTED-CUSTOMER-DATA.md`). Remaining: publish the policy at a URL, provide the support address, decide the listing category, and add the Billing API if the app is paid (OQ-7) |
 | 1.1.2 | Good Partner standing | 📋 | Nothing in the code affects this |
 | 1.2.1 | **50 net installs** from active shops on paid plans | ⏳ | Cannot be engineered |
 | 1.2.2 | **5 reviews** | ⏳ | " |
@@ -139,11 +139,19 @@ account, or merchants — none of it can be written.
    print documents for the merchant, and choosing that category would trigger
    5.9.1 (admin print action extension), which cannot be built until documents
    can be created via API.
-2. 📋 Privacy policy URL and support contact, plus a written GDPR-vs-GoBD
-   position (PRD OQ-4), since the app retains personal data on booked documents.
-3. 📋 Protected customer data grant (PRD D-007). Order *intake* already works
-   without it via polling; this unlocks the webhook fast path.
-4. 📋 Billing API, if the app is paid (PRD OQ-7).
+2. 📋 **Privacy policy and support contact.** A policy is drafted in
+   `docs/PRIVACY.md`, written against the actual schema rather than boilerplate;
+   it needs legal review, publication at a URL, and the contact addresses
+   filling in. Then set `PRIVACY_POLICY_URL` and `SUPPORT_URL` — the app already
+   renders both in its footer.
+3. 📋 **Protected customer data grant** (PRD D-007). The declaration is prepared
+   in `docs/PROTECTED-CUSTOMER-DATA.md`: which fields, why, and the safeguards as
+   implemented. Four rows need a human — staff access process, sub-processors,
+   backup encryption, data residency. Order *intake* already works without the
+   grant via polling; it unlocks the webhook fast path.
+4. 📋 Billing API, if the app is paid (PRD OQ-7). Not implemented, because
+   whether and how to charge is undecided — building a pricing model against an
+   undecided price would be guesswork.
 
 **Needs merchants and time**
 
