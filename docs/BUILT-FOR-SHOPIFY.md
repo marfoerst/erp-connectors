@@ -20,7 +20,8 @@ one-time gate.
 
 | # | Requirement | Status | Notes |
 |---|---|---|---|
-| 1.1.1 | Meet App Store requirements | 📋 | Code side done: mandatory compliance webhooks, OAuth/session tokens, no theme writes, and support + privacy links now surfaced in the app from `SUPPORT_URL` / `PRIVACY_POLICY_URL`. A privacy policy is drafted (`docs/PRIVACY.md`) and the protected-data declaration is prepared (`docs/PROTECTED-CUSTOMER-DATA.md`). Remaining: publish the policy at a URL, provide the support address, decide the listing category, and add the Billing API if the app is paid (OQ-7) |
+| 1.1.1 | Meet App Store requirements | 📋 | **Audited directly** against the App Store requirements page, which found three violations the BFS list alone does not mention — all now fixed: the template's public pages asked for manual entry of a shop domain (explicitly forbidden: "your app must not request the manual entry of a myshopify.com URL or a shop's domain"), the landing page still carried placeholder copy, and `read_all_orders` was requested without demonstrated necessity (removed earlier). Confirmed compliant: GraphQL Admin API only, no REST; `app-bridge.js` before any other script tag; no localStorage or cookie reliance; mandatory compliance webhooks present. |
+| | | | Also done: support + privacy links surfaced in-app from `SUPPORT_URL` / `PRIVACY_POLICY_URL`, a privacy policy drafted (`docs/PRIVACY.md`), the protected-data declaration prepared (`docs/PROTECTED-CUSTOMER-DATA.md`), and the app icon prepared to spec (`assets/`). Remaining: publish the policy at a URL, provide the support address, decide the listing category, upload the icon, and add the Billing API if the app is paid (OQ-7) |
 | 1.1.2 | Good Partner standing | 📋 | Nothing in the code affects this |
 | 1.2.1 | **50 net installs** from active shops on paid plans | ⏳ | Cannot be engineered |
 | 1.2.2 | **5 reviews** | ⏳ | " |

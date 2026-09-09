@@ -1,57 +1,58 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
-
-import { login } from "../../shopify.server";
 
 import styles from "./styles.module.css";
 
+/**
+ * The app's public landing page.
+ *
+ * Two App Store requirements shape this: apps "must not request the manual
+ * entry of a myshopify.com URL or a shop's domain" — so there is no login form
+ * — and listings "should only include factual information", so the template's
+ * placeholder copy is gone. It makes no claims about outcomes.
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
 
+  // Shopify supplies ?shop=… when launching the embedded app.
   if (url.searchParams.get("shop")) {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  return null;
 };
 
 export default function App() {
-  const { showForm } = useLoaderData<typeof loader>();
-
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>Scopevisio ERP for Shopify</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Books paid Shopify orders into Scopevisio: the customer becomes a
+          contact and debitor, and the VAT treatment comes from your own
+          Steuermatrix rather than being guessed at.
         </p>
-        {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
-            </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
-          </Form>
-        )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Customers become debitors</strong>. Each buyer is created as
+            a Scopevisio contact with a debitor account, guests included, and
+            never duplicated on a retry.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>VAT from your Steuermatrix</strong>. The connector
+            determines the Steuersachverhalt, then asks Scopevisio which
+            Erlöskonto and Steuerschlüssel apply for that destination and date.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Nothing booked on a guess</strong>. When a tax case or an
+            account cannot be resolved, the order is held with an explanation
+            instead of being posted — a posted document cannot be withdrawn.
           </li>
         </ul>
+        <p className={styles.text}>
+          Install from the Shopify App Store and open it from Apps in your
+          store&rsquo;s admin.
+        </p>
       </div>
     </div>
   );

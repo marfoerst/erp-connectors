@@ -33,6 +33,11 @@ export default function App() {
         {/* App Bridge reads the key from this meta tag. */}
         <meta name="shopify-api-key" content={apiKey} />
         <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" />
+        {/* Scopevisio icon for the app's own pages. The Shopify App Store
+            listing icon is uploaded separately in the Partner Dashboard —
+            see assets/app-icon-1200.png. */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://cdn.shopify.com/" />
         <link
           rel="stylesheet"
