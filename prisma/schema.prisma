@@ -1,0 +1,249 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+/// The Scopevisio connection for one Shopify shop. Everything needed to reach
+/// the ERP is configured from the embedded app, so nothing here is env-driven.
+model ScopevisioConnection {
+  id       String @id @default(cuid())
+  shop     String @unique
+  /// https://appload.scopevisio.com by default; overridable for other stages.
+  baseUrl  String @default("https://appload.scopevisio.com")
+  /// 7-digit Scopevisio customer number.
+  customer String
+  /// Organisation name as used at the token endpoint.
+  organisation String
+  username String
+  /// AES-256-GCM ciphertext. Kept only until a refresh token is obtained.
+  passwordEnc String?
+  /// AES-256-GCM ciphertext.
+  refreshTokenEnc String?
+  /// Cached access token, also encrypted. Short-lived.
+  accessTokenEnc  String?
+  accessTokenExpiresAt DateTime?
+
+  /// Result of the last successful/attempted reachability check.
+  status       String    @default("unverified") // unverified | connected | error
+  statusDetail String?
+  lastCheckAt  DateTime?
+
+  settings ScopevisioSettings?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Per-shop mapping configuration. Chosen by the merchant in the app UI from
+/// their own Scopevisio master data — never hardcoded.
+model ScopevisioSettings {
+  id     String @id @default(cuid())
+  shop   String @unique
+  connection   ScopevisioConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId String               @unique
+
+  /// Master switch. Off until the merchant has reviewed the mapping.
+  syncEnabled Boolean @default(false)
+  /// false = create documents but never post them (PRD C-014).
+  autoPost    Boolean @default(false)
+
+  // --- Customer mapping ---
+  /// Kundengruppe for customers with a Shopify account. Auto-created by the ERP.
+  customerGroup      String  @default("Shopify")
+  /// Kundengruppe for guest checkouts.
+  guestCustomerGroup String  @default("Shopify Guest")
+  /// Debitoren-Nummernkreis, if the merchant wants a dedicated one.
+  numberRangeNumber  Int?
+  /// Book guests against a Conto pro Diverse account.
+  guestUseCpd        Boolean @default(true)
+
+  // --- Tax / VAT ---
+  /// Steuersachverhalt (vatScope caseId) per case. Picked from GET /vatscopes.
+  vatScopeDomestic       Int?
+  vatScopeEuB2c          Int?
+  vatScopeEuB2cOss       Int?
+  vatScopeEuB2bReverse   Int?
+  vatScopeThirdCountry   Int?
+  /// Merchant is registered for OSS / above the EUR 10,000 threshold.
+  ossRegistered          Boolean @default(false)
+  /// The organisation's own country of taxation, ISO-3166 alpha-2.
+  homeCountry            String  @default("DE")
+  /// Tolerance in minor units when comparing Shopify tax to the ERP's rate.
+  taxToleranceCents      Int     @default(2)
+
+  // --- Documents ---
+  /// Let the ERP derive vatKey/rate from the product master where possible.
+  copyVatFromProduct     Boolean @default(true)
+  /// Let the ERP derive the Erlöskonto from the product master.
+  copyAccountsFromProduct Boolean @default(true)
+  /// Optional export template name for generated PDFs.
+  documentTemplate       String?
+
+  /// Order intake cursor. The connector polls the Admin API for paid orders
+  /// rather than relying only on webhooks, because:
+  ///   - webhook subscriptions on `orders/paid` require Shopify's protected
+  ///     customer data grant, which polling with granted scopes does not;
+  ///   - a webhook missed while Scopevisio was unreachable is gone, whereas a
+  ///     cursor recovers it (PRD C-011, C-012).
+  /// Webhooks, once available, become the fast path and polling the safety net.
+  lastPolledAt      DateTime?
+  pollCursor        String?
+
+  /// How finished invoices reach Scopevisio.
+  ///   "csv" — the connector produces a CSV the bookkeeper imports in the
+  ///           Scopevisio client, which creates real Abrechnungsbelege the
+  ///           Faktura module can send. The working path today.
+  ///   "api" — direct document import. Blocked until the XML schema is known
+  ///           (OQ-10); selecting it will hold every order.
+  deliveryMode           String  @default("csv")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// One row per Shopify order the connector has seen. This table is the
+/// idempotency guard (PRD C-007) and the exception queue (C-009, C-010).
+model OrderSync {
+  id   String @id @default(cuid())
+  shop String
+
+  /// Shopify order GID — the natural key. Unique per shop.
+  orderGid    String
+  orderNumber String?
+  orderName   String?
+
+  /// pending | processing | ready_to_export | exported | booked | held | declined
+  ///
+  /// ready_to_export → the draft is complete and correct; it is waiting to be
+  ///   delivered via CSV. Not an error state.
+  /// exported        → included in a downloaded CSV batch, awaiting the
+  ///   bookkeeper's confirmation that the import went through.
+  /// booked          → confirmed in Scopevisio.
+  /// held            → something a human must decide before it can proceed.
+  state  String  @default("pending")
+  /// Machine-readable reason when state != booked.
+  reason String?
+  /// Human-readable, accounting-flavoured explanation for the queue.
+  detail String?
+
+  /// Resolved Scopevisio identifiers.
+  contactId       Int?
+  personalAccount String?
+  documentNumber  String?
+  creditNumber    String?
+
+  /// The tax case we assumed, for the queue to show.
+  vatScopeUsed Int?
+  countryUsed  String?
+
+  /// Erlöskonto and Steuerschlüssel the ERP resolved for this order.
+  resolvedAccount String?
+  resolvedVatKey  String?
+
+  /// The finished invoice draft as JSON: everything needed to produce the
+  /// document, kept so a held order can be exported for manual import while
+  /// the API's own import schema is unavailable (OQ-10).
+  draftJson String?
+
+  /// CSV delivery. `exportedAt` is set when the order is included in a
+  /// downloaded batch; `importConfirmedAt` only when a human confirms the
+  /// import succeeded — the connector cannot observe that itself, so it must
+  /// never assume it.
+  exportBatch       String?
+  exportedAt        DateTime?
+  importConfirmedAt DateTime?
+  importConfirmedBy String?
+
+  /// Totals for the pre-post checksum, in minor units.
+  shopifyTaxCents Int?
+  erpTaxCents     Int?
+
+  /// Who resolved a held document, and why.
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  resolveNote  String?
+
+  attempts   Int      @default(0)
+  lastTriedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([shop, orderGid])
+  @@index([shop, state])
+}
+
+/// Append-only audit of what the connector did, so a bookkeeper can answer a
+/// question without leaving Shopify (PRD C-009). Never mutated.
+model SyncEvent {
+  id      String   @id @default(cuid())
+  shop    String
+  orderGid String?
+  /// info | warn | error
+  level   String   @default("info")
+  /// Short machine key, e.g. "contact.created", "invoice.held.tax_mismatch".
+  event   String
+  message String
+  /// JSON blob with the details worth keeping.
+  data    String?
+  createdAt DateTime @default(now())
+
+  @@index([shop, createdAt])
+  @@index([shop, orderGid])
+}
+
+/// Cached Scopevisio master data so the settings UI can offer real choices
+/// without a round trip on every render. Refreshed on demand.
+model MasterDataCache {
+  id        String   @id @default(cuid())
+  shop      String
+  /// vatscopes | vatmatrix | revenueaccounts
+  kind      String
+  payload   String
+  fetchedAt DateTime @default(now())
+
+  @@unique([shop, kind])
+}
+
+/// VAT-ID validation results. Validity at time of supply governs whether
+/// reverse charge may be applied, so the timestamp is part of the record.
+model VatIdCheck {
+  id        String   @id @default(cuid())
+  shop      String
+  vatId     String
+  valid     Boolean
+  /// Raw response detail from VIES, for the audit trail.
+  detail    String?
+  checkedAt DateTime @default(now())
+
+  @@index([shop, vatId])
+}

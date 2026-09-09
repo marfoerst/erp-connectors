@@ -1,0 +1,53 @@
+# This file stores configurations for your Shopify app.
+
+client_id = "7652a32e3cbd24225992a66c9ed4f341"
+
+# This file is the SOURCE OF TRUTH for the Partner app: `shopify app dev` and
+# `shopify app deploy` push these values up, overwriting whatever is set in the
+# Partner Dashboard. Editing the dashboard by hand does not stick — change it
+# here.
+#
+# Dev uses a fixed localhost URL rather than a Cloudflare tunnel, because a
+# tunnel URL changes on every restart. Requires:
+#   npm run dev -- --use-localhost --localhost-port 3000 --install-mkcert
+# For production this must become the app's real public host.
+application_url = "https://localhost:3000"
+embedded = true
+name = "Scopevisio ERP Connector"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+# read_orders          — the order-to-cash trigger
+# read_customers       — name and address for the Scopevisio contact
+# read_products        — SKU mapping onto the Scopevisio product master
+# read_all_orders is deliberately NOT requested yet: it needs separate Shopify
+# approval and only serves PRD C-012 (reprocessing periods older than 60 days),
+# which is a Should, not a Must.
+scopes = "read_orders,read_customers,read_products"
+
+[auth]
+redirect_urls = [ "https://localhost:3000/auth/callback" ]
+
+[webhooks]
+api_version = "2025-01"
+
+# No webhook subscriptions here on purpose.
+#
+# `--use-localhost` serves the app from https://localhost:3000, and Shopify
+# rejects any webhook `uri` it cannot reach from the public internet:
+#   Invalid value: "https://localhost:3000/webhooks/app/uninstalled" for: "uri"
+#
+# So this config is for UI work only — the embedded screens, the Scopevisio
+# connection, the mapping. Nothing that Shopify has to call into.
+#
+# For anything webhook-driven (order booking, refunds, uninstall cleanup) use
+# the default config, which runs behind a tunnel:
+#   npm run dev:tunnel
+[build]
+# Without this the CLI *prompts* "Have Shopify automatically update your app's
+# URL?" on every `shopify app dev`. With no TTY (e.g. run from a non-interactive
+# shell) it cannot prompt, so it silently keeps application_url as-is and the
+# app opens at that URL instead of the dev tunnel — which looks exactly like
+# "clicking the app sends me to scopevisio.com".
+automatically_update_urls_on_dev = true
+dev_store_url = "fuchs-maus-digital-demo-shop.myshopify.com"

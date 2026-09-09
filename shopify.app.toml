@@ -1,0 +1,94 @@
+# This file stores configurations for your Shopify app.
+
+client_id = "7652a32e3cbd24225992a66c9ed4f341"
+
+# This file is the SOURCE OF TRUTH for the Partner app: `shopify app dev` and
+# `shopify app deploy` push these values up, overwriting whatever is set in the
+# Partner Dashboard. Editing the dashboard by hand does not stick — change it
+# here.
+#
+# `npm run dev:tunnel` replaces this with its Cloudflare tunnel URL, which is
+# what makes webhooks reachable. The value below is only a placeholder for when
+# no dev server is running; for production it must be the app's real host.
+application_url = "https://localhost:3000"
+embedded = true
+name = "Scopevisio ERP Connector"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+# read_orders          — the order-to-cash trigger
+# read_customers       — name and address for the Scopevisio contact
+# read_products        — SKU mapping onto the Scopevisio product master
+# read_all_orders is deliberately NOT requested yet: it needs separate Shopify
+# approval and only serves PRD C-012 (reprocessing periods older than 60 days),
+# which is a Should, not a Must.
+scopes = "read_orders,read_customers,read_products"
+
+[auth]
+redirect_urls = [ "https://localhost:3000/auth/callback" ]
+
+[webhooks]
+api_version = "2025-01"
+
+  # Handled by: /app/routes/webhooks.app.uninstalled.tsx
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = ["app/uninstalled"]
+
+  # Handled by: /app/routes/webhooks.app.scopes_update.tsx
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  # ⚠️ BLOCKED ON APPROVAL — uncomment both blocks once the app has protected
+  # customer data access.
+  #
+  # `orders/paid` and `refunds/create` carry protected customer data (name,
+  # address, e-mail), and Shopify refuses the subscription until the app is
+  # granted access. Until then `shopify app dev` fails to start with:
+  #   "This app is not approved to subscribe to webhook topics containing
+  #    protected customer data."
+  #
+  # To grant it: Partner Dashboard → this app → API access → Protected customer
+  # data access → request access. For a development app on a dev store this is
+  # normally self-serve; a public listing needs review. Request Level 1 plus the
+  # "Name", "Address" and "Email" fields — the connector needs all three to put
+  # a legally valid invoice address on a Faktura.
+  #
+  # The handlers are already written and tested:
+  #   /app/routes/webhooks.orders.paid.tsx
+  #   /app/routes/webhooks.refunds.create.tsx
+  #
+  # The order-to-cash trigger. `orders/paid`, not `orders/create` — the
+  # invoice should follow the payment, not the intent to buy.
+  # [[webhooks.subscriptions]]
+  # topics = [ "orders/paid" ]
+  # uri = "/webhooks/orders/paid"
+
+  # A posted Faktura is immutable under GoBD, so a refund becomes a Gutschrift.
+  # [[webhooks.subscriptions]]
+  # topics = [ "refunds/create" ]
+  # uri = "/webhooks/refunds/create"
+
+  # Mandatory compliance topics. Required for public distribution and treated
+  # as first-class here rather than as launch paperwork (PRD R-007).
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/data_request"
+  compliance_topics = ["customers/data_request"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/redact"
+  compliance_topics = ["customers/redact"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/shop/redact"
+  compliance_topics = ["shop/redact"]
+
+[build]
+# Without this the CLI *prompts* "Have Shopify automatically update your app's
+# URL?" on every `shopify app dev`. With no TTY (e.g. run from a non-interactive
+# shell) it cannot prompt, so it silently keeps application_url as-is and the
+# app opens at that URL instead of the dev tunnel — which looks exactly like
+# "clicking the app sends me to scopevisio.com".
+automatically_update_urls_on_dev = true
+dev_store_url = "fuchs-maus-digital-demo-shop.myshopify.com"
