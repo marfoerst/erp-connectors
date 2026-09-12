@@ -1,7 +1,8 @@
 # Status and handover
 
-Written 2026-09-09, on branch `feat/scopevisio-connector` (11 commits ahead of
-`main`, nothing uncommitted). Start here when picking the work back up.
+Written 2026-09-09, revised 2026-09-12 when the app became a **custom
+(single-store) app** rather than a public App Store listing. Start here when
+picking the work back up.
 
 ---
 
@@ -38,6 +39,30 @@ npm run dev           # localhost:3000, shopify.app.local.toml, no webhooks
 npm run dev:tunnel    # tunnel + webhooks; needs a real terminal
 ```
 
+## Distribution: custom, one store
+
+The app is distributed as a **custom app** — installed on a single store from a
+link generated in the Partner Dashboard. Not the App Store. More merchants are
+served by duplicating the app rather than by listing it publicly.
+
+**This choice cannot be undone.** Shopify does not allow changing an app's
+distribution method after it is selected; a second route would mean a second
+app. It was made deliberately: the merchant count is one.
+
+Two consequences worth knowing before the count grows:
+
+- **Each duplicate is a separate Partner app**, with its own `client_id` and API
+  secret. This app reads a single `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` from
+  the environment, so duplicate #2 needs its own deployment or its own
+  environment — not just a second install link against the same host.
+- **Shopify billing is unavailable to custom apps.** Any charge is a normal
+  invoice between Scopevisio and the merchant. There is no Billing API code to
+  write, and none should be written.
+
+What this removed, in exchange: App Store review, the listing (copy, category,
+demo store), Built for Shopify, and — the one that was actually blocking — the
+protected customer data review.
+
 ## What is NOT done
 
 **Blocked on Scopevisio (internal ask)**
@@ -52,23 +77,36 @@ npm run dev:tunnel    # tunnel + webhooks; needs a real terminal
 
 1. **Deploy.** `fly.toml` is written and the container is verified, but nothing
    is deployed. `application_url` is still `https://localhost:3000`. See
-   `DEPLOYMENT.md`.
-2. **Privacy policy** — `PRIVACY.md` is drafted against the real schema; needs
-   legal review, a public URL, then `PRIVACY_POLICY_URL` + `SUPPORT_URL`.
-3. **Protected customer data grant** — `PROTECTED-CUSTOMER-DATA.md` is prepared;
-   four rows need infra facts (staff access, sub-processors, backup encryption,
-   data residency — Frankfurt now answers the last).
-4. **Icon upload** — `assets/app-icon-1200.png` is ready. Partner Dashboard
-   only; no CLI or API path exists.
-5. **Category** — recommend Finance, *not* Invoices and Receipts (see below).
-6. **Pricing** — undecided. Managed Pricing needs **no code**, so this is purely
-   commercial.
-7. **Screenshots are 1568×773; Shopify wants ≥1600×900.** Re-capture before
-   uploading. `assets/screenshots/README.md` has the command.
+   `DEPLOYMENT.md`. Unchanged by the move to custom distribution.
+2. **Select Custom distribution** in the Partner Dashboard, then generate the
+   install link. Irreversible — see above.
+3. **Protected customer data.** No longer a review, just a form: select the data
+   and the Name / Address / Email fields in the Partner Dashboard. The
+   `orders/paid` and `refunds/create` subscriptions are already uncommented in
+   `shopify.app.toml` and will be accepted once that is done. The level 1 and 2
+   *requirements* still bind us — `PROTECTED-CUSTOMER-DATA.md` has four rows
+   needing infra facts (staff access, sub-processors, backup encryption, data
+   residency — Frankfurt answers the last).
+4. **Privacy policy** — `PRIVACY.md` is drafted against the real schema. It no
+   longer needs a public listing URL, but the merchant still needs the
+   disclosure, and `PRIVACY_POLICY_URL` + `SUPPORT_URL` still populate the app's
+   footer. Legal review outstanding.
+5. **The GoBD-vs-GDPR erasure position** (PRD OQ-4) — German retention law,
+   entirely independent of how the app is distributed. Still the one genuinely
+   open legal question.
+
+**No longer applicable**
+
+Screenshots, listing copy, app introduction, category (the Finance vs. Invoices
+and Receipts question is moot), demo store, App Store icon requirements, Built
+for Shopify, and Managed Pricing. `assets/screenshots/` and
+`app/routes/screenshots.$view.tsx` are kept — the harness 404s in production and
+the images are still useful for onboarding material — but nothing depends on
+them any more, and `BUILT-FOR-SHOPIFY.md` is now a record of what was built, not
+a checklist to finish.
 
 **⚠️ `partners.shopify.com` and `admin.shopify.com` are blocked by network
-policy on this machine.** That blocks items 2–6 and forced the screenshot
-harness. Worth allowlisting first.
+policy on this machine.** That still blocks items 2–4. Worth allowlisting first.
 
 ## Decisions already made — please don't re-litigate
 
@@ -85,6 +123,7 @@ Each of these cost real investigation.
 | **Intake polls as well as accepting webhooks** | Polling needs no protected-data grant and recovers orders missed while Scopevisio was down. Both are safe together — `syncOrder` is idempotent, proven by `npm run e2e:intake` |
 | **Category: Finance, not Invoices and Receipts** | That category triggers BFS 5.9.1, an admin print action extension, which cannot be built until documents can be created via API |
 | **German UI by default** | Every user is a German-market bookkeeper, and a listing may only claim languages the UI supports |
+| **Custom distribution, one store** | The merchant count is one, and it cut App Store review, the listing and the protected-data review out of the critical path. Irreversible — see above |
 
 ## Traps that already caught us
 
@@ -156,19 +195,21 @@ Recorded so they don't cost the time twice.
 
 1. Get `partners.shopify.com` / `admin.shopify.com` allowlisted — it gates most
    of the remaining work.
-2. Deploy (`DEPLOYMENT.md`), set `application_url`, `npm run shopify -- app deploy`.
-3. Re-capture screenshots at ≥1600×900 — ideally inside the real admin once the
-   domain is reachable, which is better imagery than the harness.
-4. Ask the OpenScope owner for the import XML schema. With it, the direct API
+2. Deploy (`DEPLOYMENT.md`), set `application_url` and `redirect_urls` to the
+   real host.
+3. Select **Custom distribution** in the Partner Dashboard. Irreversible.
+4. Select protected customer data + the Name / Address / Email fields. No
+   review, no wait.
+5. `npm run shopify -- app deploy` to push the config, including the two
+   protected-data webhook subscriptions.
+6. Generate the install link and install on the merchant's store.
+7. Verify end to end on the real store: a paid order should reach the journal,
+   produce a contact and a CSV draft. The e2e suites cover the Scopevisio half;
+   this covers the Shopify half, which has only ever run against a dev store.
+8. Legal: the GoBD-vs-GDPR position, then publish the privacy policy.
+9. Ask the OpenScope owner for the import XML schema. With it, the direct API
    path is roughly an hour: the draft, tax resolution and checksum are built and
    tested around it.
-5. Legal: the GoBD-vs-GDPR position, then publish the privacy policy.
-6. Request the protected-data grant using the prepared declaration.
-7. Decide pricing; if Managed Pricing, no code needed.
-8. Submit. **Built for Shopify comes later** — it needs 50 net installs on paid
-   plans, 5 reviews, a rating threshold and 100+ Web Vitals samples over 28
-   days. Those are measurements of a live, adopted app. Every BFS requirement
-   that code can satisfy is satisfied; see `BUILT-FOR-SHOPIFY.md`.
 
 ## Housekeeping
 

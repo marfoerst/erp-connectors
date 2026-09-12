@@ -43,38 +43,38 @@ api_version = "2025-01"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
-  # ⚠️ BLOCKED ON APPROVAL — uncomment both blocks once the app has protected
-  # customer data access.
-  #
   # `orders/paid` and `refunds/create` carry protected customer data (name,
-  # address, e-mail), and Shopify refuses the subscription until the app is
-  # granted access. Until then `shopify app dev` fails to start with:
+  # address, e-mail). Shopify refuses these subscriptions until the app is
+  # configured for protected customer data — the failure mode is that
+  # `shopify app dev` will not start:
   #   "This app is not approved to subscribe to webhook topics containing
   #    protected customer data."
   #
-  # To grant it: Partner Dashboard → this app → API access → Protected customer
-  # data access → request access. For a development app on a dev store this is
-  # normally self-serve; a public listing needs review. Request Level 1 plus the
-  # "Name", "Address" and "Email" fields — the connector needs all three to put
-  # a legally valid invoice address on a Faktura.
+  # For a CUSTOM-distribution app there is no review: levels 1 and 2 are
+  # "always available". Select the data and the Name / Address / Email fields
+  # once in the Partner Dashboard → this app → API access → Protected customer
+  # data access, and the subscriptions below are accepted. The connector needs
+  # all three fields to put a legally valid invoice address on a Faktura.
   #
-  # The handlers are already written and tested:
-  #   /app/routes/webhooks.orders.paid.tsx
-  #   /app/routes/webhooks.refunds.create.tsx
-  #
+  # No review does not mean no obligation: the level 1 and 2 requirements
+  # (encryption at rest and in backups, limited staff access, an access log, an
+  # incident response policy) still bind us contractually. See
+  # docs/PROTECTED-CUSTOMER-DATA.md.
+
   # The order-to-cash trigger. `orders/paid`, not `orders/create` — the
   # invoice should follow the payment, not the intent to buy.
-  # [[webhooks.subscriptions]]
-  # topics = [ "orders/paid" ]
-  # uri = "/webhooks/orders/paid"
+  [[webhooks.subscriptions]]
+  topics = [ "orders/paid" ]
+  uri = "/webhooks/orders/paid"
 
   # A posted Faktura is immutable under GoBD, so a refund becomes a Gutschrift.
-  # [[webhooks.subscriptions]]
-  # topics = [ "refunds/create" ]
-  # uri = "/webhooks/refunds/create"
+  [[webhooks.subscriptions]]
+  topics = [ "refunds/create" ]
+  uri = "/webhooks/refunds/create"
 
-  # Mandatory compliance topics. Required for public distribution and treated
-  # as first-class here rather than as launch paperwork (PRD R-007).
+  # Compliance topics. Only mandated for public distribution, so a custom app
+  # is not reviewed against them — kept anyway, because the obligation they
+  # implement (erasure requests) is GDPR's, not Shopify's (PRD R-007).
   [[webhooks.subscriptions]]
   uri = "/webhooks/customers/data_request"
   compliance_topics = ["customers/data_request"]

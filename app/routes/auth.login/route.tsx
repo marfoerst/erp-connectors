@@ -4,7 +4,6 @@ import {
   AppProvider as PolarisAppProvider,
   BlockStack,
   Card,
-  Link,
   Page,
   Text,
 } from "@shopify/polaris";
@@ -16,14 +15,16 @@ import { login } from "../../shopify.server";
 import { loginErrorMessage } from "./error.server";
 
 /**
- * App Store requirement: "Apps must be installed and initiated only on Shopify
- * services. Your app must not request the manual entry of a myshopify.com URL
- * or a shop's domain."
+ * Reached only when the Shopify library routes here without a `shop` parameter.
  *
- * The template shipped a shop-domain form here, which violates that. The route
- * still exists because the Shopify library routes here when a `shop` parameter
- * is missing, and `login()` still handles the parameter when it IS present —
- * but nothing asks the merchant to type a domain.
+ * The template shipped a shop-domain form here. It was removed because asking a
+ * merchant to type their own domain is a phishing-shaped habit — an App Store
+ * rule originally, but the reasoning does not depend on the distribution type,
+ * so it stays for a custom app too. `login()` still handles the parameter when
+ * it IS present; nothing asks anyone to type a domain.
+ *
+ * There is deliberately no link out to apps.shopify.com: a custom app has no
+ * App Store page. It is installed once, from a link issued by Scopevisio.
  */
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
@@ -53,13 +54,13 @@ export default function Auth() {
               Open this app from your Shopify admin
             </Text>
             <Text as="p" tone="subdued">
-              Scopevisio ERP runs inside the Shopify admin. Install it from the
-              Shopify App Store, then open it from Apps in your store&rsquo;s
-              admin — there is nothing to sign in to here.
+              Scopevisio ERP runs inside the Shopify admin. Open it from Apps in
+              your store&rsquo;s admin — there is nothing to sign in to here.
             </Text>
-            <Link url="https://apps.shopify.com/" target="_blank">
-              Go to the Shopify App Store
-            </Link>
+            <Text as="p" tone="subdued">
+              If it is not installed yet, use the install link supplied by
+              Scopevisio.
+            </Text>
           </BlockStack>
         </Card>
       </Page>

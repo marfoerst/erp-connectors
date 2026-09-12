@@ -5,7 +5,21 @@ accesses, why, and what safeguards are in place. This is the prepared answer
 set, grounded in the code rather than in intent, so the Partner Dashboard form
 can be filled in directly.
 
-Request: **Level 1** plus the **Name**, **Address** and **Email** fields.
+Request: **Level 2** — name, address, phone or email put an app at level 2 by
+definition; we request Name, Address and Email, and not phone.
+
+**There is no review for this app.** Levels 1 and 2 are *always available* to a
+custom-distribution app; only public apps are reviewed
+([distribution table](https://shopify.dev/docs/apps/launch/protected-customer-data)).
+Select the data and the three fields once in the Partner Dashboard and the
+`orders/paid` and `refunds/create` subscriptions in `shopify.app.toml` start
+working.
+
+That removes a gate, not an obligation. The level 1 and 2 requirements below are
+binding through the Partner Program Agreement whether or not anyone checks them,
+and the four rows marked as needing infra facts still need real answers — for
+our own compliance file, and for the merchant's GDPR paperwork, which is the
+harder audience.
 
 ## Why each field is needed
 

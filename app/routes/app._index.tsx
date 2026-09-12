@@ -49,7 +49,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         connection.settings.syncEnabled,
     ),
     onboardingDismissed: Boolean(connection?.settings?.onboardingDismissedAt),
-    // The App Store requires a reachable support contact and privacy policy.
+    // A reachable support contact and privacy policy. Not review-gated for a
+    // custom app, but the merchant still needs both, and level 1 protected-data
+    // handling requires telling them what we process and why.
     // Kept in the environment so the URLs can change without a code deploy.
     supportUrl: process.env.SUPPORT_URL || "",
     privacyUrl: process.env.PRIVACY_POLICY_URL || "",

@@ -6,10 +6,13 @@ import styles from "./styles.module.css";
 /**
  * The app's public landing page.
  *
- * Two App Store requirements shape this: apps "must not request the manual
- * entry of a myshopify.com URL or a shop's domain" — so there is no login form
- * — and listings "should only include factual information", so the template's
- * placeholder copy is gone. It makes no claims about outcomes.
+ * The app is distributed as a custom app — installed on one store from a link
+ * issued in the Partner Dashboard — so this page is not a storefront for it.
+ *
+ * Two rules still shape it, both worth keeping whether or not a reviewer ever
+ * checks: nothing here requests the manual entry of a myshopify.com URL or a
+ * shop's domain (so there is no login form), and the copy is factual, making no
+ * claims about outcomes.
  */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -50,8 +53,8 @@ export default function App() {
           </li>
         </ul>
         <p className={styles.text}>
-          Install from the Shopify App Store and open it from Apps in your
-          store&rsquo;s admin.
+          Installed from a link supplied by Scopevisio. Once installed, open it
+          from Apps in your store&rsquo;s admin.
         </p>
       </div>
     </div>

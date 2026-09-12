@@ -15,7 +15,11 @@ const shopify = shopifyApp({
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
-  distribution: AppDistribution.AppStore,
+  // Custom distribution: this app installs on a single store via an install
+  // link from the Partner Dashboard, not from the App Store. `SingleMerchant`
+  // keeps OAuth and the embedded experience (unlike `ShopifyAdmin`, which is
+  // the admin-created kind — no OAuth, no App Bridge, no CLI).
+  distribution: AppDistribution.SingleMerchant,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
     expiringOfflineAccessTokens: true,
