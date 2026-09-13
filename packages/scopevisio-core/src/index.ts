@@ -45,4 +45,5 @@ export type {
   PostingsResult,
 } from "./postings";
 
+export * from "./tax";
 export * from "./types";

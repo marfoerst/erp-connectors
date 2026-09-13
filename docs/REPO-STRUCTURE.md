@@ -28,60 +28,69 @@ holds VIES validation, the hold-rather-than-guess semantics, credential
 encryption and the journal's credential redaction. Those took the longest to get
 right and are the worst things to have two divergent copies of.
 
-## Target layout
+## Actual layout
 
 ```
 packages/
-  scopevisio/        OpenScope client, token refresh, contacts and debitors,
-                     master data, VAT resolution, documents, readiness check
-  connector-kit/     the chassis: encrypted credential store, journal with
-                     redaction, sync state and idempotency, hold semantics,
-                     health, i18n
+  scopevisio-core/   OpenScope client, VAT determination, contact upsert,
+                     invoice and credit builders, journal postings, crypto.
+                     No database. No commerce platform. No framework.
 connectors/
-  shopify/           OAuth, webhooks, order intake, admin UI
-  <next>/
+  shopify/           Remix app: OAuth, webhooks, order intake, Polaris admin
+  shopware/          HTTP service: app handshake, signed webhooks, Admin API
 docs/
 ```
 
-## Do not extract this yet
+## The seam, and how it is enforced
 
-One consumer is not enough to find a seam. Extracting now would shape
-`packages/` around Shopify's assumptions, and the second connector would spend
-its time fighting abstractions built for something else. The second consumer is
-what reveals where the boundary really is.
+Core cannot reach a database, because it has none. The two things it would
+otherwise need are supplied as ports (`packages/scopevisio-core/src/ports.ts`):
 
-**Extract when connector #2 starts, not before** — and extract by moving code
-that #2 actually needs, one piece at a time, rather than designing the packages
-up front.
+| Port | What a connector supplies |
+|---|---|
+| `ConnectionStore` | `load()` / `save(patch)` for one tenant's Scopevisio connection |
+| `Journal` | `event(entry)` — append-only, credential-redacting |
 
-## Until then
+Each connector's adapter is about sixty lines:
+`connectors/shopify/app/scopevisio/core.server.ts` and
+`connectors/shopware/src/store.ts`. The only real difference between them is the
+tenant key — a myshopify domain versus a Shopware `shopId`.
 
-Keep the eventual seam visible so the code does not drift across it:
+Operations take a `ScopevisioContext` (`{ client, journal }`) rather than a
+tenant id, so core never has to know how a connector identifies its tenants.
 
-- **Never copy `app/scopevisio/tax-rules.ts`.** 133 lines, 497 lines of tests,
-  no Shopify and no Scopevisio dependency. It is the most valuable thing here.
-  If a second connector needs it, that is the signal to start the extraction.
-- **Never copy `crypto.server.ts` or `log.server.ts`.** The journal redacts
-  credentials embedded in string values, not just in keys, because a leak was
-  found there once. A copy will not have that fix.
-- `app/scopevisio/*` should not import from `app/routes/*` or from
-  `@shopify/*`. It currently does not, apart from Shopify *type* references in
-  `order-mapper` and `fetch-order`. Keep it that way.
-- New Shopify-specific work goes under `app/routes/`; new Scopevisio-side work
-  goes under `app/scopevisio/`.
+## What must never be copied into a new connector
 
-## The one known design problem
+- **`tax-rules.ts` and `tax.ts`.** The VAT decision — five Steuersachverhalte,
+  VIES validation, and the hold-rather-than-guess behaviour. This is the most
+  valuable code here and two divergent copies would be the worst possible
+  outcome. The Shopware connector calls the same functions; so should the next.
+- **`crypto.ts`.** One implementation, one key.
+- **Journal redaction.** Both connectors scrub credentials *inside string
+  values*, not only by key name, because tokens have turned up embedded in URLs
+  and in error bodies. A fresh implementation will not have that fix — copy the
+  tests if you must write one.
+- **`InvoiceDraft`.** The delivery-agnostic shape. CSV, the OpenScope XML import
+  and journal postings are all renderers over it.
 
-`OrderSync` is order-shaped: `orderGid`, `orderNumber`, `orderName`, unique on
-`(shop, orderGid)`. A connector that syncs time entries, payments or bookings
-has no orders. Before the second connector, that model needs to become something
-like `SyncRecord` keyed by `(connector, tenant, externalId)` with the
-document-specific fields moved into the existing `draftJson` payload.
+## Still connector-local, and why
 
-Do that migration deliberately, with the second connector's real requirements in
-hand. It is the single piece of schema that will be painful to change later,
-because it holds the double-booking guard and under GoBD a duplicate posting
-cannot be withdrawn.
+`csv-export.server.ts`, `masterdata.server.ts`, `intake.server.ts` and the
+readiness check remain in the Shopify connector because they are bound to its
+Prisma schema. **CSV delivery in particular should move to core** rather than
+being written a second time — the Shopware connector does not have it yet, and
+that is the next piece of extraction, not an invitation to duplicate.
+
+## Schema: two shapes, deliberately
+
+The Shopify connector keeps `OrderSync` (`orderGid`, unique on
+`(shop, orderGid)`). The Shopware connector introduced `SyncRecord`
+(`externalId`, unique on `(shopId, externalId)`) — the platform-neutral shape.
+
+They are not yet unified, and unifying them is a data migration on a table that
+holds the double-booking guard. Under GoBD a duplicate posting cannot be
+withdrawn, only corrected with a credit note, so that migration deserves its own
+change with its own verification — not a drive-by rename.
 
 ## Platform limits that constrain every connector
 

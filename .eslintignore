@@ -4,3 +4,8 @@ public/build
 shopify-app-remix
 */*.yml
 .shopify
+
+# Prisma-generated clients. Not our code, and linting it produces hundreds of
+# errors that drown the real ones.
+connectors/*/generated
+connectors/*/prisma/generated

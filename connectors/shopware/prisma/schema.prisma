@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+  // Explicit output: the Shopify connector also generates a client, and in a
+  // workspace both would land on node_modules/.prisma/client and overwrite
+  // each other.
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  // ⚠️ PRODUCTION: must point at a persistent volume. Losing SyncRecord loses
+  // the double-booking guard, and under GoBD a duplicate posting cannot be
+  // withdrawn — only corrected with a credit note.
+  url      = env("DATABASE_URL")
+}
+
+/// One Shopware shop that installed this app.
+///
+/// `shopId` is Shopware's own identifier, handed to us during registration.
+/// `shopSecret` is the secret WE generated for that shop; every webhook it
+/// sends is signed with it.
+model ShopwareShop {
+  id         String   @id @default(cuid())
+  shopId     String   @unique
+  shopUrl    String
+  shopSecret String
+  /// Admin API credentials from the confirmation call. Encrypted at rest.
+  apiKeyEnc    String?
+  secretKeyEnc String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  connection ScopevisioConnection?
+  settings   ScopevisioSettings?
+}
+
+/// The merchant's Scopevisio credentials, one per shop.
+model ScopevisioConnection {
+  id      String @id @default(cuid())
+  shopId  String @unique
+  shop    ShopwareShop @relation(fields: [shopId], references: [shopId], onDelete: Cascade)
+
+  baseUrl      String  @default("https://appload.scopevisio.com")
+  customer     String
+  organisation String  @default("")
+  username     String
+  /// All encrypted with SCOPEVISIO_ENCRYPTION_KEY (AES-256-GCM).
+  passwordEnc          String?
+  refreshTokenEnc      String?
+  accessTokenEnc       String?
+  accessTokenExpiresAt DateTime?
+
+  status       String @default("unverified")
+  statusDetail String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Per-shop mapping decisions. Mirrors the Shopify connector's settings.
+model ScopevisioSettings {
+  id     String @id @default(cuid())
+  shopId String @unique
+  shop   ShopwareShop @relation(fields: [shopId], references: [shopId], onDelete: Cascade)
+
+  syncEnabled Boolean @default(false)
+  /// Leave off until the review queue has been reliably empty. A posted
+  /// document cannot be withdrawn.
+  autoPost    Boolean @default(false)
+
+  homeCountry       String  @default("DE")
+  ossRegistered     Boolean @default(false)
+  customerGroup      String @default("Shopware")
+  guestCustomerGroup String @default("Shopware Guest")
+  guestUseCpd        Boolean @default(true)
+  numberRangeNumber  Int?
+  taxToleranceCents  Int     @default(2)
+
+  /// Steuersachverhalt per tax case, resolved from the tenant's Steuermatrix.
+  vatScopeDomestic      Int?
+  vatScopeEuB2c         Int?
+  vatScopeEuB2cOss      Int?
+  vatScopeEuB2bReverse  Int?
+  vatScopeThirdCountry  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// The idempotency guard. One row per Shopware order, ever.
+model SyncRecord {
+  id     String @id @default(cuid())
+  shopId String
+
+  /// Shopware order id — the natural key.
+  externalId  String
+  externalRef String?
+
+  /// pending | ready_to_export | exported | booked | held | declined
+  state  String @default("pending")
+  reason String?
+  detail String?
+
+  contactId       Int?
+  personalAccount String?
+  documentNumber  String?
+
+  vatScopeUsed Int?
+  countryUsed  String?
+
+  /// The finished draft as JSON — everything needed to produce the document.
+  draftJson String?
+
+  sourceTaxCents Int?
+  erpTaxCents    Int?
+
+  attempts    Int      @default(0)
+  lastTriedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([shopId, externalId])
+  @@index([shopId, state])
+}
+
+/// Append-only journal. Never mutated.
+model SyncEvent {
+  id     String @id @default(cuid())
+  shopId String
+
+  level      String  @default("info")
+  event      String
+  message    String
+  externalId String?
+  data       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([shopId, createdAt])
+}
+
+/// VIES results, kept with their timestamp because validity *at the time of
+/// supply* is what governs reverse charge — not validity today.
+model VatIdCheck {
+  id     String @id @default(cuid())
+  shopId String
+  vatId  String
+  valid  Boolean
+  detail String?
+
+  checkedAt DateTime @default(now())
+
+  @@index([shopId, vatId, checkedAt])
+}

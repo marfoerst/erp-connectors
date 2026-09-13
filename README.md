@@ -3,11 +3,25 @@
 Connectors that bring third-party systems into Scopevisio. This repository is
 where they all live.
 
-The first one is **Shopify** (`app/`), and everything below describes it. The
-intended shape of the repository as more arrive is in
-[`docs/REPO-STRUCTURE.md`](docs/REPO-STRUCTURE.md) — read that before adding a
-second connector, because roughly half of what is here is already
-connector-agnostic and should not be copied.
+| Connector | Status | Notes |
+|---|---|---|
+| [Shopify](connectors/shopify/) | Built, not yet deployed | Custom (single-store) distribution |
+| [Shopware](connectors/shopware/) | Handshake and sync working | No admin UI yet |
+
+Everything that is not about a particular shop system lives in
+[`packages/scopevisio-core`](packages/scopevisio-core/): the OpenScope client,
+VAT determination, contact upsert and the document builders. A connector
+supplies two ports — where to keep the tenant's connection, and where to write
+the journal — and brings its own storage.
+
+[`docs/REPO-STRUCTURE.md`](docs/REPO-STRUCTURE.md) explains the split and, more
+importantly, what must never be copied into a new connector.
+
+```bash
+npm install
+npm test          # every package
+npm run lint
+```
 
 ---
 

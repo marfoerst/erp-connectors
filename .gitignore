@@ -28,3 +28,8 @@ pnpm-lock.yaml
 # Ignore shopify files created during app dev
 .shopify/*
 .shopify.lock
+
+# Per-connector generated code and local databases
+connectors/*/generated/
+connectors/*/prisma/*.sqlite
+connectors/*/prisma/*.sqlite-journal

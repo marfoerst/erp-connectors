@@ -33,13 +33,24 @@ export interface UpsertResult {
 }
 
 export interface CustomerSettings {
+  /** Connector name, used to tag the contact — e.g. "shopify", "shopware". */
+  source: string;
   customerGroup: string;
   guestCustomerGroup: string;
   numberRangeNumber: number | null;
   guestUseCpd: boolean;
 }
 
-const REVIEW_TAG = "shopify-review";
+/**
+ * Contacts are tagged with the connector that created them, so a bookkeeper can
+ * tell a Shopify buyer from a Shopware one in the Scopevisio client — and so a
+ * second connector never looks like it is duplicating the first's work.
+ */
+function tagsFor(source: string, isGuest: boolean, needsReview: boolean) {
+  return [isGuest ? `${source}-guest` : source, needsReview ? `${source}-review` : null]
+    .filter(Boolean)
+    .join(", ");
+}
 
 export async function upsertCustomer(
   ctx: ScopevisioContext,
@@ -101,7 +112,14 @@ export async function upsertCustomer(
   }
 
   // 3. Create.
-  const contactId = await createContact(client, order, gid, isGuest, Boolean(reviewNote));
+  const contactId = await createContact(
+    client,
+    order,
+    gid,
+    isGuest,
+    Boolean(reviewNote),
+    settings.source,
+  );
   const personalAccount = await ensureDebitor(ctx, client, contactId, order, settings, isGuest);
 
   await ctx.journal.event({
@@ -182,6 +200,7 @@ async function createContact(
   gid: string,
   isGuest: boolean,
   needsReview: boolean,
+  source: string,
 ): Promise<number> {
   const addr = order.billingAddress ?? order.shippingAddress ?? null;
 
@@ -198,9 +217,7 @@ async function createContact(
     order.email ||
     "Unbekannt";
 
-  const tags = [isGuest ? "shopify-guest" : "shopify", needsReview ? REVIEW_TAG : null]
-    .filter(Boolean)
-    .join(",");
+  const tags = tagsFor(source, isGuest, needsReview);
 
   const form: KontaktForm = {
     person: isPerson,

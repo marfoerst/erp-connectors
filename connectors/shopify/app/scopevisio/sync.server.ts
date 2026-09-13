@@ -122,7 +122,10 @@ export async function syncOrder(
     }
 
     // 2. Customer.
-    const customer = await upsertCustomer(ctx, order, settings);
+    const customer = await upsertCustomer(ctx, order, {
+      ...settings,
+      source: "shopify",
+    });
 
     // Record the contact IMMEDIATELY. The contact now exists in Scopevisio, so
     // if anything downstream fails we must still know about it — otherwise a

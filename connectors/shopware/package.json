@@ -1,0 +1,21 @@
+{
+  "name": "@erp/connector-shopware",
+  "private": true,
+  "type": "module",
+  "description": "Books paid Shopware 6 orders into Scopevisio.",
+  "scripts": {
+    "dev": "node --import tsx --watch src/server.ts",
+    "start": "node --import tsx src/server.ts",
+    "setup": "prisma generate && prisma migrate deploy",
+    "prisma": "prisma",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e:handshake": "node --env-file-if-exists=.env scripts/e2e-handshake.mjs"
+  },
+  "dependencies": {
+    "@erp/scopevisio-core": "*",
+    "@prisma/client": "^6.2.1",
+    "prisma": "^6.2.1"
+  }
+}

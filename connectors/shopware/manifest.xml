@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/Framework/App/Manifest/Schema/manifest-2.0.xsd">
+    <meta>
+        <name>ScopevisioConnector</name>
+        <label>Scopevisio ERP</label>
+        <label lang="de-DE">Scopevisio ERP</label>
+        <description>Books paid orders into Scopevisio: the customer becomes a contact and debitor, and the VAT treatment comes from your own Steuermatrix.</description>
+        <description lang="de-DE">Bucht bezahlte Bestellungen nach Scopevisio: Der Kunde wird als Kontakt mit Debitorenkonto angelegt, der Steuersachverhalt kommt aus Ihrer eigenen Steuermatrix.</description>
+        <author>Scopevisio AG</author>
+        <copyright>(c) Scopevisio AG</copyright>
+        <version>0.1.0</version>
+        <license>proprietary</license>
+    </meta>
+
+    <setup>
+        <!-- Shopware calls this once, signed with the secret below, to hand us
+             the shop's Admin API credentials. See src/registration.ts. -->
+        <registrationUrl>https://localhost:3100/app/register</registrationUrl>
+        <!-- Replace before distributing. Must match SHOPWARE_APP_SECRET. -->
+        <secret>replace-me</secret>
+    </setup>
+
+    <permissions>
+        <!-- Read-only. The connector never writes back into the shop: a booked
+             document is the ERP's record, not the shop's. -->
+        <read>order</read>
+        <read>order_customer</read>
+        <read>order_address</read>
+        <read>order_line_item</read>
+        <read>order_transaction</read>
+        <read>customer</read>
+        <read>currency</read>
+        <read>country</read>
+        <read>product</read>
+    </permissions>
+
+    <webhooks>
+        <!-- The order-to-cash trigger. The payment, not the intent to buy —
+             the direct equivalent of Shopify's orders/paid. -->
+        <webhook name="orderPaid"
+                 url="https://localhost:3100/webhook/order-paid"
+                 event="state_enter.order_transaction.state.paid"/>
+
+        <!-- A posted Faktura is immutable under GoBD, so a refund becomes a
+             Gutschrift rather than an edit. -->
+        <webhook name="orderRefunded"
+                 url="https://localhost:3100/webhook/order-refunded"
+                 event="state_enter.order_transaction.state.refunded"/>
+
+        <!-- Told when the merchant removes the app, so we stop polling and can
+             honour deletion. -->
+        <webhook name="appDeleted"
+                 url="https://localhost:3100/webhook/app-deleted"
+                 event="app.deleted"/>
+    </webhooks>
+</manifest>
