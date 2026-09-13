@@ -6,7 +6,7 @@ where they all live.
 | Connector | Status | Notes |
 |---|---|---|
 | [Shopify](connectors/shopify/) | Built, not yet deployed | Custom (single-store) distribution |
-| [Shopware](connectors/shopware/) | Handshake and sync working | No admin UI yet |
+| [Shopware](connectors/shopware/) | Verified end to end against live Shopware and Scopevisio | No admin UI yet |
 
 Everything that is not about a particular shop system lives in
 [`packages/scopevisio-core`](packages/scopevisio-core/): the OpenScope client,
@@ -16,6 +16,10 @@ the journal — and brings its own storage.
 
 [`docs/REPO-STRUCTURE.md`](docs/REPO-STRUCTURE.md) explains the split and, more
 importantly, what must never be copied into a new connector.
+
+[`research/`](research/) holds the work behind the roadmap — which connectors to
+build, and what the platform has to ship before third parties can build any.
+Start with [the strategy](research/strategy-before-the-marketplace.md).
 
 ```bash
 npm install
