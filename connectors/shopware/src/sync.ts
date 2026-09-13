@@ -83,6 +83,24 @@ export function buildDraft(args: {
   };
 }
 
+async function recordSkip(
+  shopId: string,
+  order: OrderLike,
+  reason: string,
+  detail: string,
+): Promise<SyncOutcome> {
+  await prisma.syncEvent.create({
+    data: {
+      shopId,
+      level: "warn",
+      event: `order.skipped.${reason}`,
+      message: `Order ${order.name ?? order.id} was not processed: ${detail}`,
+      externalId: order.id,
+    },
+  });
+  return { state: "skipped", reason };
+}
+
 async function hold(
   shopId: string,
   order: OrderLike,
@@ -111,8 +129,13 @@ export async function syncOrder(shopId: string, order: OrderLike): Promise<SyncO
     where: { shopId },
   })) as ShopwareSettings | null;
 
-  if (!settings) return { state: "skipped", reason: "not_configured" };
-  if (!settings.syncEnabled) return { state: "skipped", reason: "sync_disabled" };
+  // A skip must leave a trace. An order that silently disappears is the one
+  // thing a bookkeeper cannot reconcile, and "nothing happened" is indis-
+  // tinguishable from "the connector is broken".
+  if (!settings) return recordSkip(shopId, order, "not_configured",
+    "The Scopevisio connection is not configured for this shop yet.");
+  if (!settings.syncEnabled) return recordSkip(shopId, order, "sync_disabled",
+    "Syncing is switched off for this shop.");
 
   // Claim the order. Already booked means another delivery of the same webhook
   // got there first, and we must do nothing at all.
@@ -120,6 +143,16 @@ export async function syncOrder(shopId: string, order: OrderLike): Promise<SyncO
     where: { shopId_externalId: { shopId, externalId: order.id } },
   });
   if (existing?.state === "booked") {
+    // Not an error: a redelivered webhook. Recorded so the trail is complete.
+    await prisma.syncEvent.create({
+      data: {
+        shopId,
+        level: "info",
+        event: "order.duplicate_ignored",
+        message: `Order ${order.name ?? order.id} is already booked; this delivery was ignored.`,
+        externalId: order.id,
+      },
+    });
     return { state: "skipped", reason: "already_booked" };
   }
 

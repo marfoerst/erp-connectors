@@ -1,0 +1,572 @@
+{
+  "data": {
+    "payload": {
+      "order": {
+        "id": "01a09b2dafd072de90caa0d1cd32a444",
+        "orderNumber": "10005",
+        "orderDateTime": "2026-09-13T14:30:57.744+00:00",
+        "billingAddress": null,
+        "deliveries": [
+          {
+            "extensions": {
+              "foreignKeys": {
+                "extensions": [],
+                "apiAlias": "order_delivery_foreign_keys_extension"
+              }
+            },
+            "_uniqueIdentifier": "01a09b2dafd072de90caa0d1cc0fb4c6",
+            "versionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "translated": [],
+            "createdAt": "2026-09-13T14:30:57.750+00:00",
+            "updatedAt": null,
+            "orderId": "01a09b2dafd072de90caa0d1cd32a444",
+            "orderVersionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "shippingOrderAddressId": "01a09b2dafd072de90caa0d1cbcea1f3",
+            "shippingOrderAddressVersionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "shippingMethodId": "01994d23c68a73c3b4773bdcd813420f",
+            "trackingCodes": [],
+            "shippingDateEarliest": "2026-09-14T00:00:00.000+00:00",
+            "shippingDateLatest": "2026-09-16T00:00:00.000+00:00",
+            "shippingCosts": {
+              "extensions": [],
+              "unitPrice": 0,
+              "totalPrice": 0,
+              "calculatedTaxes": [
+                {
+                  "extensions": [],
+                  "tax": 0,
+                  "taxRate": 19,
+                  "price": 0,
+                  "label": null,
+                  "apiAlias": "cart_tax_calculated"
+                }
+              ],
+              "taxRules": [
+                {
+                  "extensions": [],
+                  "taxRate": 19,
+                  "percentage": 100,
+                  "apiAlias": "cart_tax_rule"
+                }
+              ],
+              "quantity": 1,
+              "referencePrice": null,
+              "listPrice": null,
+              "regulationPrice": null,
+              "apiAlias": "calculated_price"
+            },
+            "shippingOrderAddress": {
+              "extensions": {
+                "foreignKeys": {
+                  "extensions": [],
+                  "apiAlias": "order_address_foreign_keys_extension"
+                }
+              },
+              "_uniqueIdentifier": "01a09b2dafd072de90caa0d1cbcea1f3",
+              "versionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+              "translated": [],
+              "createdAt": "2026-09-13T14:30:57.749+00:00",
+              "updatedAt": null,
+              "countryId": "01994d23b91f719882c8a206d8e0defe",
+              "countryStateId": null,
+              "firstName": "Anja",
+              "lastName": "Bergmann",
+              "street": "Hauptstra\u00dfe 12",
+              "zipcode": "53111",
+              "city": "Bonn",
+              "company": "Bergmann Optik GmbH",
+              "department": null,
+              "title": null,
+              "vatId": null,
+              "phoneNumber": null,
+              "additionalAddressLine1": null,
+              "additionalAddressLine2": null,
+              "country": {
+                "extensions": {
+                  "foreignKeys": {
+                    "extensions": [],
+                    "apiAlias": "country_foreign_keys_extension"
+                  },
+                  "internal_mapping_storage": {
+                    "extensions": [],
+                    "apiAlias": null
+                  }
+                },
+                "_uniqueIdentifier": "01994d23b91f719882c8a206d8e0defe",
+                "versionId": null,
+                "translated": {
+                  "name": "Germany",
+                  "customFields": [],
+                  "addressFormat": [
+                    [
+                      "address/company",
+                      "symbol/dash",
+                      "address/department"
+                    ],
+                    [
+                      "address/first_name",
+                      "address/last_name"
+                    ],
+                    [
+                      "address/street"
+                    ],
+                    [
+                      "address/zipcode",
+                      "address/city"
+                    ],
+                    [
+                      "address/country"
+                    ]
+                  ]
+                },
+                "createdAt": "2025-09-15T11:30:10.847+00:00",
+                "updatedAt": null,
+                "name": "Germany",
+                "iso": "DE",
+                "position": 1,
+                "active": true,
+                "shippingAvailable": true,
+                "iso3": "DEU",
+                "displayStateInRegistration": false,
+                "forceStateInRegistration": false,
+                "checkVatIdPattern": false,
+                "vatIdPattern": "DE\\d{9}",
+                "vatIdRequired": false,
+                "customerTax": {
+                  "extensions": [],
+                  "enabled": false,
+                  "currencyId": "b7d2554b0ce847cd82f3ac9bd1c0dfca",
+                  "amount": 0,
+                  "apiAlias": "shopware_core_framework_data_abstraction_layer_tax_free_config"
+                },
+                "companyTax": {
+                  "extensions": [],
+                  "enabled": false,
+                  "currencyId": "b7d2554b0ce847cd82f3ac9bd1c0dfca",
+                  "amount": 0,
+                  "apiAlias": "shopware_core_framework_data_abstraction_layer_tax_free_config"
+                },
+                "states": null,
+                "translations": null,
+                "postalCodeRequired": true,
+                "isEu": true,
+                "checkPostalCodePattern": false,
+                "checkAdvancedPostalCodePattern": false,
+                "advancedPostalCodePattern": null,
+                "defaultPostalCodePattern": "\\d{5}",
+                "addressFormat": [
+                  [
+                    "address/company",
+                    "symbol/dash",
+                    "address/department"
+                  ],
+                  [
+                    "address/first_name",
+                    "address/last_name"
+                  ],
+                  [
+                    "address/street"
+                  ],
+                  [
+                    "address/zipcode",
+                    "address/city"
+                  ],
+                  [
+                    "address/country"
+                  ]
+                ],
+                "customFields": null,
+                "id": "01994d23b91f719882c8a206d8e0defe",
+                "apiAlias": "country"
+              },
+              "countryState": null,
+              "salutation": null,
+              "hash": "e11a9773c187a05a3de076902175c5ab5554e737bc376ee9639cee01e2cc468d",
+              "customFields": null,
+              "id": "01a09b2dafd072de90caa0d1cbcea1f3",
+              "apiAlias": "order_address"
+            },
+            "stateId": "01994d23cb5a70fe80681ea1f3aec283",
+            "stateMachineState": null,
+            "shippingMethod": {
+              "extensions": {
+                "foreignKeys": {
+                  "extensions": [],
+                  "apiAlias": "shipping_method_foreign_keys_extension"
+                },
+                "internal_mapping_storage": {
+                  "extensions": [],
+                  "apiAlias": null
+                }
+              },
+              "_uniqueIdentifier": "01994d23c68a73c3b4773bdcd813420f",
+              "versionId": null,
+              "translated": {
+                "name": "Standard",
+                "customFields": [],
+                "description": null,
+                "trackingUrl": null
+              },
+              "createdAt": "2025-09-15T11:30:14.293+00:00",
+              "updatedAt": "2025-09-15T11:32:07.724+00:00",
+              "name": "Standard",
+              "active": true,
+              "position": 1,
+              "description": null,
+              "trackingUrl": null,
+              "deliveryTimeId": "01994d23c64f72e391be65c39f568bfe",
+              "deliveryTime": null,
+              "translations": null,
+              "availabilityRule": null,
+              "prices": [],
+              "mediaId": null,
+              "media": null,
+              "tags": null,
+              "taxType": "auto",
+              "technicalName": "shipping_standard",
+              "tax": null,
+              "customFields": null,
+              "id": "01994d23c68a73c3b4773bdcd813420f",
+              "apiAlias": "shipping_method"
+            },
+            "positions": null,
+            "customFields": null,
+            "id": "01a09b2dafd072de90caa0d1cc0fb4c6",
+            "apiAlias": "order_delivery"
+          }
+        ],
+        "lineItems": [
+          {
+            "extensions": {
+              "foreignKeys": {
+                "extensions": [],
+                "apiAlias": "order_line_item_foreign_keys_extension"
+              }
+            },
+            "_uniqueIdentifier": "01a09b2dafd072de90caa0d1cb5efa4c",
+            "versionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "translated": [],
+            "createdAt": "2026-09-13T14:30:57.750+00:00",
+            "updatedAt": null,
+            "orderId": "01a09b2dafd072de90caa0d1cd32a444",
+            "identifier": "01a09b2daf887252ac1f08d0c2b8e218",
+            "referencedId": "01994d257eca7264960c87c91d56c149",
+            "productId": "01994d257eca7264960c87c91d56c149",
+            "promotionId": null,
+            "quantity": 2,
+            "unitPrice": 19.99,
+            "totalPrice": 39.98,
+            "label": "Variant product",
+            "description": null,
+            "good": true,
+            "removable": true,
+            "coverId": "102ac62ba27347a688030a05c1790db7",
+            "stackable": true,
+            "position": 1,
+            "priceDefinition": {
+              "extensions": [],
+              "isCalculated": true,
+              "referencePriceDefinition": null,
+              "listPrice": null,
+              "regulationPrice": null,
+              "price": 19.99,
+              "taxRules": [
+                {
+                  "extensions": [],
+                  "taxRate": 19,
+                  "percentage": 100,
+                  "apiAlias": "cart_tax_rule"
+                }
+              ],
+              "quantity": 2,
+              "type": "quantity",
+              "apiAlias": "cart_price_quantity"
+            },
+            "payload": {
+              "isNew": false,
+              "stock": 40,
+              "taxId": "01994d23c6c370f2aad53e76b611849e",
+              "tagIds": null,
+              "options": [
+                {
+                  "group": "Colour",
+                  "option": "Blue"
+                },
+                {
+                  "group": "Size",
+                  "option": "M"
+                }
+              ],
+              "features": [],
+              "parentId": "43a23e0c03bf4ceabc6055a2185faa87",
+              "createdAt": "2025-09-15 11:32:07.040",
+              "optionIds": [
+                "2bfd278e87204807a890da4a3e81dd90",
+                "5997d91dc0784997bdef68dfc5a08912"
+              ],
+              "streamIds": null,
+              "isCloseout": false,
+              "categoryIds": [
+                "01994d23c6cd702da1b515c5c23894f8",
+                "a515ae260223466f8e37471d279e6406",
+                "8de9b484c54f441c894774e5f57e485c"
+              ],
+              "propertyIds": [
+                "5997d91dc0784997bdef68dfc5a08912",
+                "7cab88165ae5420f921232511b6e8f7d",
+                "96638a1c7ab847bbb3ca64167ab30a3e",
+                "acfd7586d02848f1ac801f4776efa414"
+              ],
+              "releaseDate": "2025-09-15 11:32:06.978",
+              "customFields": [],
+              "productNumber": "SWDEMO10005.1",
+              "manufacturerId": "7f24e96676e944b0a0addc20d56728cb",
+              "purchasePrices": null,
+              "markAsTopseller": false
+            },
+            "parentId": null,
+            "parent": null,
+            "type": "product",
+            "orderDeliveryPositions": null,
+            "cover": null,
+            "children": null,
+            "states": [
+              "is-physical"
+            ],
+            "downloads": [],
+            "orderVersionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "productVersionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "parentVersionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "customFields": null,
+            "id": "01a09b2dafd072de90caa0d1cb5efa4c",
+            "apiAlias": "order_line_item"
+          }
+        ],
+        "transactions": [
+          {
+            "extensions": {
+              "foreignKeys": {
+                "extensions": [],
+                "apiAlias": "order_transaction_foreign_keys_extension"
+              }
+            },
+            "_uniqueIdentifier": "01a09b2dafd072de90caa0d1ccdd70b4",
+            "versionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "translated": [],
+            "createdAt": "2026-09-13T14:30:57.750+00:00",
+            "updatedAt": "2026-09-13T14:30:58.406+00:00",
+            "orderId": "01a09b2dafd072de90caa0d1cd32a444",
+            "orderVersionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+            "paymentMethodId": "01994d23c631724886729be0e7e2da53",
+            "amount": {
+              "extensions": [],
+              "unitPrice": 39.98,
+              "totalPrice": 39.98,
+              "calculatedTaxes": [
+                {
+                  "extensions": [],
+                  "tax": 6.38,
+                  "taxRate": 19,
+                  "price": 39.98,
+                  "label": null,
+                  "apiAlias": "cart_tax_calculated"
+                }
+              ],
+              "taxRules": [
+                {
+                  "extensions": [],
+                  "taxRate": 19,
+                  "percentage": 100,
+                  "apiAlias": "cart_tax_rule"
+                }
+              ],
+              "quantity": 1,
+              "referencePrice": null,
+              "listPrice": null,
+              "regulationPrice": null,
+              "apiAlias": "calculated_price"
+            },
+            "paymentMethod": {
+              "extensions": {
+                "foreignKeys": {
+                  "extensions": [],
+                  "apiAlias": "payment_method_foreign_keys_extension"
+                },
+                "internal_mapping_storage": {
+                  "extensions": [],
+                  "apiAlias": null
+                }
+              },
+              "_uniqueIdentifier": "01994d23c631724886729be0e7e2da53",
+              "versionId": null,
+              "translated": {
+                "name": "Cash on delivery",
+                "distinguishableName": "Cash on delivery",
+                "description": "Payment upon receipt of goods.",
+                "customFields": []
+              },
+              "createdAt": "2025-09-15T11:30:14.193+00:00",
+              "updatedAt": null,
+              "name": "Cash on delivery",
+              "distinguishableName": "Cash on delivery",
+              "description": "Payment upon receipt of goods.",
+              "position": 1,
+              "active": true,
+              "afterOrderEnabled": true,
+              "translations": null,
+              "mediaId": null,
+              "media": null,
+              "shortName": "cash_payment",
+              "technicalName": "payment_cashpayment",
+              "customFields": null,
+              "id": "01994d23c631724886729be0e7e2da53",
+              "apiAlias": "payment_method"
+            },
+            "stateMachineState": null,
+            "stateId": "01994d23cbfa72999cb59ab064a425d4",
+            "captures": null,
+            "validationData": [],
+            "customFields": null,
+            "id": "01a09b2dafd072de90caa0d1ccdd70b4",
+            "apiAlias": "order_transaction"
+          }
+        ],
+        "currency": {
+          "extensions": {
+            "foreignKeys": {
+              "extensions": [],
+              "apiAlias": "currency_foreign_keys_extension"
+            },
+            "internal_mapping_storage": {
+              "extensions": [],
+              "apiAlias": null
+            }
+          },
+          "_uniqueIdentifier": "b7d2554b0ce847cd82f3ac9bd1c0dfca",
+          "versionId": null,
+          "translated": {
+            "shortName": "EUR",
+            "name": "Euro",
+            "customFields": []
+          },
+          "createdAt": "2025-09-15T11:30:14.081+00:00",
+          "updatedAt": null,
+          "isoCode": "EUR",
+          "factor": 1,
+          "symbol": "\u20ac",
+          "shortName": "EUR",
+          "name": "Euro",
+          "position": 1,
+          "isSystemDefault": true,
+          "itemRounding": {
+            "extensions": [],
+            "decimals": 2,
+            "interval": 0.01,
+            "roundForNet": true,
+            "apiAlias": "shopware_core_framework_data_abstraction_layer_pricing_cash_rounding_config"
+          },
+          "totalRounding": {
+            "extensions": [],
+            "decimals": 2,
+            "interval": 0.01,
+            "roundForNet": true,
+            "apiAlias": "shopware_core_framework_data_abstraction_layer_pricing_cash_rounding_config"
+          },
+          "taxFreeFrom": 0,
+          "customFields": null,
+          "id": "b7d2554b0ce847cd82f3ac9bd1c0dfca",
+          "apiAlias": "currency"
+        },
+        "price": {
+          "extensions": [],
+          "rawTotal": 39.98,
+          "netPrice": 33.6,
+          "totalPrice": 39.98,
+          "positionPrice": 39.98,
+          "calculatedTaxes": [
+            {
+              "extensions": [],
+              "tax": 6.38,
+              "taxRate": 19,
+              "price": 39.98,
+              "label": null,
+              "apiAlias": "cart_tax_calculated"
+            }
+          ],
+          "taxRules": [
+            {
+              "extensions": [],
+              "taxRate": 19,
+              "percentage": 100,
+              "apiAlias": "cart_tax_rule"
+            }
+          ],
+          "taxStatus": "gross",
+          "apiAlias": "cart_price"
+        },
+        "orderCustomer": {
+          "extensions": {
+            "foreignKeys": {
+              "extensions": [],
+              "apiAlias": "order_customer_foreign_keys_extension"
+            }
+          },
+          "_uniqueIdentifier": "01a09b2dafd4712b969dccebe2676e06",
+          "versionId": "0fa91ce3e96a4bc2be4bd9ce752c3425",
+          "translated": [],
+          "createdAt": "2026-09-13T14:30:57.749+00:00",
+          "updatedAt": null,
+          "email": "e2e+1789309857521@example.de",
+          "salutationId": "01994d23b90d7266b8db52d8c1060ffb",
+          "firstName": "Anja",
+          "lastName": "Bergmann",
+          "title": null,
+          "vatIds": [
+            "DE811907980"
+          ],
+          "company": "Bergmann Optik GmbH",
+          "customerNumber": "10005",
+          "salutation": {
+            "extensions": {
+              "foreignKeys": {
+                "extensions": [],
+                "apiAlias": "salutation_foreign_keys_extension"
+              },
+              "internal_mapping_storage": {
+                "extensions": [],
+                "apiAlias": null
+              }
+            },
+            "_uniqueIdentifier": "01994d23b90d7266b8db52d8c1060ffb",
+            "versionId": null,
+            "translated": {
+              "displayName": "Not specified",
+              "letterName": "Dear",
+              "customFields": []
+            },
+            "createdAt": "2025-09-15T11:30:10.829+00:00",
+            "updatedAt": null,
+            "salutationKey": "not_specified",
+            "displayName": "Not specified",
+            "letterName": "Dear",
+            "customFields": null,
+            "id": "01994d23b90d7266b8db52d8c1060ffb",
+            "apiAlias": "salutation"
+          },
+          "customFields": null,
+          "id": "01a09b2dafd4712b969dccebe2676e06",
+          "apiAlias": "order_customer"
+        }
+      }
+    },
+    "event": "state_enter.order_transaction.state.paid"
+  },
+  "source": {
+    "url": "http://localhost:8000",
+    "eventId": "01a09b2db2d77260b8fc6d08e2c03a9d",
+    "shopId": "KOFS6bXaa81MTJpd",
+    "appVersion": "0.1.1",
+    "inAppPurchases": null
+  },
+  "timestamp": 1789309858
+}

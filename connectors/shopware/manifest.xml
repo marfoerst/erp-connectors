@@ -9,7 +9,7 @@
         <description lang="de-DE">Bucht bezahlte Bestellungen nach Scopevisio: Der Kunde wird als Kontakt mit Debitorenkonto angelegt, der Steuersachverhalt kommt aus Ihrer eigenen Steuermatrix.</description>
         <author>Scopevisio AG</author>
         <copyright>(c) Scopevisio AG</copyright>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
         <license>proprietary</license>
     </meta>
 
@@ -29,6 +29,12 @@
         <read>order_address</read>
         <read>order_line_item</read>
         <read>order_transaction</read>
+        <!-- order_delivery and payment_method are required by the associations
+             fetchOrder asks for. Without them every real order fetch returns
+             403 with missingPrivileges — which no unit test can catch, because
+             the permission set only exists inside Shopware. -->
+        <read>order_delivery</read>
+        <read>payment_method</read>
         <read>customer</read>
         <read>currency</read>
         <read>country</read>

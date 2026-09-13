@@ -70,10 +70,11 @@ state_enter.order_transaction.state.paid
 verify shopware-shop-signature ──► reject unless it matches this shop's secret
         │
         ▼
-resolve order from the transaction (the webhook carries the transaction)
+take the order id from data.payload.order.id
         │
         ▼
-fetch the order with every association the mapper reads
+fetch the full order over the Admin API
+(the webhook's inline order has no billingAddress)
         │
         ▼
 map to the platform-neutral OrderLike
@@ -107,6 +108,39 @@ posting cannot be withdrawn, only corrected with a credit note.
   protects the Scopevisio credentials.
 - **The journal redacts credentials inside values, not just by key name** —
   tokens turn up embedded in URLs and error bodies.
+
+## Verified against a real Shopware 6.7.2.2 store
+
+Not simulated — a dockware instance, the app installed via
+`bin/console app:install`, real orders placed through the Store API and
+transitioned to paid through the Admin API:
+
+| | |
+|---|---|
+| Registration handshake, driven by Shopware itself | ✅ |
+| Admin API OAuth (client_credentials) | ✅ |
+| Order fetch with all associations | ✅ |
+| Order mapping — VAT ID, company, SKU, tax in cents, payment method | ✅ |
+| Webhook delivery, signature verified | ✅ |
+| Reinstall after uninstall | ✅ |
+
+Four bugs were found this way that no unit test could have caught, because each
+lived in the gap between what the documentation said and what Shopware does.
+They are listed in `docs/SHOPWARE-FINDINGS.md`.
+
+**Not yet verified:** anything past `syncOrder` — the Scopevisio half needs test
+tenant credentials.
+
+## Running the Shopware worker
+
+Webhooks are dispatched through Shopware's message queue, not sent inline. With
+no worker running, nothing is ever delivered and there is no error anywhere:
+
+```bash
+docker exec <container> php bin/console messenger:consume async --time-limit=30
+```
+
+Worth knowing before concluding that a webhook subscription is broken.
 
 ## Not done yet
 

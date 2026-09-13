@@ -45,11 +45,23 @@ export interface RegisterResponse {
  * first, a confirmation arriving before the write completed would be rejected
  * as unsigned.
  *
- * Re-registration is supported: an existing shop keeps its row and gets a new
- * secret. Shopware sends `shopware-shop-signature` on a re-registration, signed
- * with the OLD secret; we verify it when we have one, so that a stranger who
- * learns a shopId cannot re-point an installed shop at themselves. That is
- * exactly the hole CVE-2026-31889 opened in Shopware's own implementation.
+ * Re-registration and reinstallation are different things, and conflating them
+ * bricks the app. Verified against Shopware 6.7.2.2:
+ *
+ *   - A LIVE re-registration (URL change, secret rotation) arrives WITH
+ *     `shopware-shop-signature`, signed with the old secret. It must be
+ *     verified, or anyone who learns a shopId could re-point an installed shop
+ *     at themselves — the hole CVE-2026-31889 opened in Shopware's own code.
+ *
+ *   - A REINSTALL after an uninstall arrives WITHOUT that header, because
+ *     Shopware dropped its side of the secret. Demanding a proof here means the
+ *     merchant can never reinstall: our first real install failed with exactly
+ *     that, "Invalid shop signature on re-registration", and no amount of
+ *     retrying would have fixed it.
+ *
+ * So: verify when a signature is offered, and otherwise treat it as the fresh
+ * installation Shopware believes it is — rotating the secret and discarding the
+ * previous installation's API credentials, which are now stale.
  */
 export async function handleRegister(args: {
   config: Config;
@@ -65,14 +77,19 @@ export async function handleRegister(args: {
   }
 
   const existing = await prisma.shopwareShop.findUnique({ where: { shopId: query.shopId } });
-  if (existing) {
-    // Re-registration. Prove possession of the current secret before replacing it.
-    if (!verify(rawQuery, shopSignature, existing.shopSecret)) {
+
+  // Shopware offers the header only while it still holds a secret. When it does,
+  // possession must be proven before we replace anything.
+  const isLiveReregistration = Boolean(existing) && shopSignature !== undefined;
+
+  if (isLiveReregistration) {
+    if (!verify(rawQuery, shopSignature, existing!.shopSecret)) {
       return { status: 401, body: { error: "Invalid shop signature on re-registration." } };
     }
   }
 
   const secret = generateShopSecret();
+  const isReinstall = Boolean(existing) && !isLiveReregistration;
 
   await prisma.shopwareShop.upsert({
     where: { shopId: query.shopId },
@@ -82,8 +99,29 @@ export async function handleRegister(args: {
       shopSecret: secret,
       active: true,
     },
-    update: { shopUrl: query.shopUrl, shopSecret: secret, active: true },
+    update: {
+      shopUrl: query.shopUrl,
+      shopSecret: secret,
+      active: true,
+      // A reinstall's stored API credentials belong to the previous
+      // installation and no longer work. Keeping them would leave the connector
+      // making authenticated calls with a dead key until something failed.
+      ...(isReinstall ? { apiKeyEnc: null, secretKeyEnc: null } : {}),
+    },
   });
+
+  if (isReinstall) {
+    await prisma.syncEvent.create({
+      data: {
+        shopId: query.shopId,
+        level: "warn",
+        event: "app.reinstalled",
+        message:
+          "The app was reinstalled. A new shop secret was issued and the previous " +
+          "installation's API credentials were discarded.",
+      },
+    });
+  }
 
   return {
     status: 200,

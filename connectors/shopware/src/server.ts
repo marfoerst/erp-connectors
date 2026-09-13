@@ -7,7 +7,7 @@ import { rawQueryString, verify } from "./signature.js";
 import { ShopwareClient } from "./admin-api.js";
 import { mapOrder } from "./order-mapper.js";
 import { syncOrder } from "./sync.js";
-import { shopIdFrom, transactionIdsFrom, type ShopwareWebhookBody } from "./webhooks.js";
+import { orderIdsFrom, shopIdFrom, type ShopwareWebhookBody } from "./webhooks.js";
 
 /**
  * The connector's HTTP surface. Four endpoints and nothing else:
@@ -76,21 +76,36 @@ async function verifiedShopId(
   return { shopId };
 }
 
+/** Journal a dead end instead of returning quietly from it. */
+async function note(shopId: string, event: string, message: string, externalId?: string) {
+  await prisma.syncEvent.create({
+    data: { shopId, level: "warn", event, message, externalId: externalId ?? null },
+  });
+}
+
 async function handleOrderPaid(rawBody: string, shopId: string) {
   const body = JSON.parse(rawBody) as ShopwareWebhookBody;
-  const transactionIds = transactionIdsFrom(body);
-  if (transactionIds.length === 0) return { handled: 0 };
+
+  const orderIds = orderIdsFrom(body);
+  if (orderIds.length === 0) {
+    // Previously a silent `return`, which is how an unrecognised payload shape
+    // went unnoticed through a whole round of testing.
+    await note(shopId, "webhook.no_order_id", "A paid webhook carried no recognisable order id.");
+    return { handled: 0 };
+  }
 
   const client = await ShopwareClient.forShop(shopId);
   let handled = 0;
 
-  for (const transactionId of transactionIds) {
-    // The webhook carries the transaction, not the order.
-    const orderId = await client.fetchOrderIdForTransaction(transactionId);
-    if (!orderId) continue;
-
+  for (const orderId of orderIds) {
+    // The webhook's inline order has no billingAddress, and that decides the
+    // destination country and the invoice recipient — so the full order is
+    // always fetched rather than trusted from the payload.
     const raw = await client.fetchOrder(orderId);
-    if (!raw) continue;
+    if (!raw) {
+      await note(shopId, "webhook.order_not_found", `Order ${orderId} could not be fetched.`, orderId);
+      continue;
+    }
 
     await syncOrder(shopId, mapOrder(raw));
     handled += 1;

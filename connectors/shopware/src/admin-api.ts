@@ -153,13 +153,4 @@ export class ShopwareClient {
     return res?.data?.[0] ?? null;
   }
 
-  /** Find the order a transaction belongs to — webhooks carry the transaction. */
-  async fetchOrderIdForTransaction(transactionId: string): Promise<string | null> {
-    const res = await this.request<{ data?: Array<{ orderId?: string }> }>(
-      "POST",
-      "/api/search/order-transaction",
-      { ids: [transactionId] },
-    );
-    return res?.data?.[0]?.orderId ?? null;
-  }
 }
