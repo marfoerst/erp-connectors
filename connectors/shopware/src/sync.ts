@@ -224,13 +224,22 @@ export async function syncOrder(shopId: string, order: OrderLike): Promise<SyncO
     // 3. Checksum before anything is created. The shop's tax is the
     //    cross-check, never the input — a disagreement means one side is
     //    misconfigured, and posting either number would be a guess.
-    const netCents = Math.round(
+    // Line totals as the shop reports them — gross or net depending on the
+    // shop's configuration. The checksum needs NET, so a gross-priced shop has
+    // to have the tax removed rather than added.
+    const lineTotalCents = Math.round(
       order.lineItems.reduce((sum, li) => sum + li.unitAmount * li.quantity, 0) * 100,
     );
+    const rate = order.lineItems[0]?.taxRate ?? undefined;
+    const netCents =
+      order.pricesIncludeTax && rate
+        ? Math.round(lineTotalCents / (1 + rate / 100))
+        : lineTotalCents;
+
     const check = taxChecksum({
       sourceTaxCents: order.totalTaxCents ?? 0,
       netCents,
-      expectedRate: order.lineItems[0]?.taxRate ?? undefined,
+      expectedRate: rate,
       toleranceCents: settings.taxToleranceCents,
     });
     if (!check.ok) {

@@ -80,6 +80,70 @@ switched off, or broken.
 
 **Fixed:** every skip, duplicate and dead end is journalled.
 
+## 5. Gross-priced shops were invoiced as if net
+
+Found by running a real order all the way into Scopevisio. The connector held it:
+
+```
+The shop calculated 6.38 tax, your Steuermatrix implies 7.60 (19%)
+```
+
+Shopware's `price.taxStatus` was `gross`, so `unitPrice` 19.99 already included
+tax. The checksum treated it as net and added 19% on top. The same error would
+have put gross amounts into the invoice as net — overstating every document from
+a gross-priced shop, which is Shopware's default.
+
+The hold was correct behaviour: the pre-post checksum caught a real discrepancy
+and refused to post. That is the guard doing exactly its job, on the first live
+order it ever saw.
+
+**Fixed:** `OrderLike` now carries `pricesIncludeTax`, the mapper sets it from
+`price.taxStatus`, and the checksum removes tax rather than adding it. Verified
+against the real numbers: 39.98 gross at 19% is 33.60 net and 6.38 tax, which is
+exactly what Shopware reported.
+
+## What actually ran, against live systems
+
+Shopware 6.7.2.2 in Docker, and the real Scopevisio tenant (customer 2039915,
+organisation "Simplify AG"), with `autoPost` off throughout so nothing could
+reach the ledger.
+
+| Step | Result |
+|---|---|
+| App installed by Shopware, handshake completed | ✅ |
+| Admin API OAuth (client_credentials) | ✅ |
+| Real order placed via Store API, transitioned to paid | ✅ |
+| Webhook delivered through Shopware's queue, signature verified | ✅ |
+| Order fetched with all associations, mapped | ✅ |
+| Scopevisio: tax case classified, Erlöskonto resolved | ✅ |
+| Scopevisio: contact created — `101070`, `101071` | ✅ |
+| Scopevisio: debitor created — `10082`, `10083`, Sammelkonto 1400 | ✅ |
+| Pre-post tax checksum | ✅ after fix 5 |
+| Invoice document created | ❌ blocked upstream |
+
+The contact read back from the live tenant carried the company name as
+`lastname` (so a Gesellschaft, not a Person), the Shopware id in `legacyNumber`,
+the VAT ID, the full address, and the tag `shopware` — which is what keeps it
+distinguishable from a Shopify-created contact.
+
+**The one remaining failure is not a Shopware problem.** Invoice creation hit
+the documented OpenScope import blocker (`API-FINDINGS.md` §7):
+
+```
+Scopevisio accepted the import request but created no invoice
+(Importierte Abrechnungsbelege: []). The import document was not recognised.
+```
+
+The connector detected it and held, rather than reporting a success it could not
+confirm — the silent-failure guard working against the live API. This blocks the
+Shopify connector identically and is resolved only by the import schema from
+whoever owns OpenScope.
+
+### Test data left in the tenant
+
+Contacts `101070` and `101071`, debitor accounts `10082` and `10083`, tagged
+`shopware`. Nothing was posted to the ledger. Delete when convenient.
+
 ## Operational notes
 
 - **Webhooks go through Shopware's message queue.** With no worker running they

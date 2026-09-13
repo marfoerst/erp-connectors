@@ -212,3 +212,63 @@ describe("isGuestOrder", () => {
     expect(isGuestOrder({ id: "x" })).toBe(true);
   });
 });
+
+describe("gross vs net pricing", () => {
+  // The ORDER fixture above is net-priced and internally consistent:
+  // 149.50 x 2 = 299.00 net, and 19% of that is the 56.81 it reports.
+  it("flags a net-priced shop", () => {
+    expect(mapOrder(ORDER).pricesIncludeTax).toBe(false);
+  });
+
+  it("flags a gross-priced shop, so tax is removed rather than added", () => {
+    const gross = { ...ORDER, price: { ...ORDER.price, taxStatus: "gross" } };
+    expect(mapOrder(gross).pricesIncludeTax).toBe(true);
+  });
+
+  it("treats tax-free as not gross", () => {
+    const free = { ...ORDER, price: { ...ORDER.price, taxStatus: "tax-free" } };
+    expect(mapOrder(free).pricesIncludeTax).toBe(false);
+  });
+
+  it("defaults to gross when Shopware omits taxStatus, matching its own default", () => {
+    const bare = { ...ORDER, price: { calculatedTaxes: [] } };
+    expect(mapOrder(bare).pricesIncludeTax).toBe(true);
+  });
+
+  /**
+   * The real order that exposed the bug: a gross-priced shop reporting
+   * 19.99 x 2 = 39.98 INCLUDING 6.38 tax. Treating 39.98 as net and adding 19%
+   * implied 7.60 of tax, and the connector held the order on the mismatch.
+   */
+  it("derives the net the shop actually reported, for a real gross order", () => {
+    const real = {
+      ...ORDER,
+      price: { taxStatus: "gross", calculatedTaxes: [{ tax: 6.38, taxRate: 19 }] },
+      lineItems: [
+        {
+          label: "Variant product",
+          quantity: 2,
+          payload: { productNumber: "SWDEMO10005.1" },
+          price: {
+            unitPrice: 19.99,
+            taxRules: [{ taxRate: 19 }],
+            calculatedTaxes: [{ tax: 6.38, taxRate: 19 }],
+          },
+        },
+      ],
+    };
+    const o = mapOrder(real);
+    expect(o.pricesIncludeTax).toBe(true);
+
+    const lineTotal = Math.round(
+      o.lineItems.reduce((s, li) => s + li.unitAmount * li.quantity, 0) * 100,
+    );
+    const rate = o.lineItems[0].taxRate!;
+    const net = Math.round(lineTotal / (1 + rate / 100));
+
+    expect(lineTotal).toBe(3998);
+    expect(net).toBe(3360);
+    // The implied tax now matches what Shopware itself calculated.
+    expect(lineTotal - net).toBe(o.totalTaxCents);
+  });
+});

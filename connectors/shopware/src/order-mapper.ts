@@ -146,6 +146,8 @@ export function mapOrder(order: ShopwareOrder): OrderLike {
     billingAddress: billing,
     shippingAddress: shipping,
     totalTaxCents,
+    // `gross` means unitPrice already includes tax. `net` and `tax-free` do not.
+    pricesIncludeTax: (order.price?.taxStatus ?? "gross") === "gross",
     lineItems: (order.lineItems ?? []).map(mapLineItem),
     vatId: extractVatId(order),
     paymentGatewayNames: (order.transactions ?? [])

@@ -213,6 +213,15 @@ export interface OrderLike {
   billingAddress?: AddressLike | null;
   shippingAddress?: AddressLike | null;
   totalTaxCents?: number;
+  /**
+   * Whether `unitAmount` on the lines is gross (tax included) or net.
+   *
+   * Shopware sets this per order from `price.taxStatus`; a shop configured for
+   * gross pricing reports 19.99 INCLUDING tax. Treating that as net and adding
+   * tax on top overstates the invoice and fails the pre-post checksum — which
+   * is exactly what a live gross-priced order did.
+   */
+  pricesIncludeTax?: boolean;
   lineItems: OrderLineLike[];
   /** Company VAT ID, when the merchant collects one. */
   vatId?: string | null;
