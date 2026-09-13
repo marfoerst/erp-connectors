@@ -1,3 +1,17 @@
 .cache
 build
 node_modules
+
+# The build stage does `COPY . .`, so anything left here lands in an image
+# layer. Secrets must not, and the rest is just weight.
+.env
+.env.*
+!.env.example
+.git
+.github
+.shopify
+docs
+assets
+*.sqlite
+*.sqlite-journal
+prisma/dev.sqlite*

@@ -29,7 +29,7 @@ Against the live tenant (customer `2039915`, organisation **Simplify AG**):
 | Idempotency, incl. guest orders | ✅ contact reused on replay |
 | CSV delivery lifecycle | ✅ 22/22 checks |
 | Polling intake (paging, cursor, no double-booking) | ✅ 16/16 checks |
-| Container build, boot, migrations, **data survives redeploy** | ✅ |
+| Container build **from a clean clone**, boot, migrations, **data survives container replacement** | ✅ |
 | 131 unit tests · typecheck · lint · build | ✅ |
 
 ```bash
@@ -75,9 +75,11 @@ protected customer data review.
 
 **Blocked on account actions**
 
-1. **Deploy.** `fly.toml` is written and the container is verified, but nothing
-   is deployed. `application_url` is still `https://localhost:3000`. See
-   `DEPLOYMENT.md`. Unchanged by the move to custom distribution.
+1. **Deploy.** Self-hosted Docker: `docker-compose.yml` is written and the
+   image is verified to build from a clean clone, boot, migrate and keep its
+   data across a container replacement. Nothing is deployed yet, and
+   `application_url` is still `https://localhost:3000`. Needs a host, a DNS
+   name and a reverse proxy holding the certificate. See `DEPLOYMENT.md`.
 2. **Select Custom distribution** in the Partner Dashboard, then generate the
    install link. Irreversible — see above.
 3. **Protected customer data.** No longer a review, just a form: select the data

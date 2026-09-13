@@ -13,8 +13,13 @@ database.sqlite
 
 .env
 .env.*
+# The template for it is not a secret and must be committed.
+!.env.example
 
-package-lock.json
+# package-lock.json is deliberately NOT ignored: the Dockerfile runs `npm ci`,
+# which fails outright without a lockfile. Ignoring it meant the image built on
+# a machine that happened to have one and failed from a clean clone — which is
+# how the app is actually deployed.
 yarn.lock
 pnpm-lock.yaml
 

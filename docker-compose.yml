@@ -1,0 +1,57 @@
+# Self-hosted deployment.
+#
+# One container, one SQLite file on a named volume, and a reverse proxy in front
+# terminating TLS. Shopify requires a valid certificate on the app's public
+# origin, and this compose file deliberately does not try to provide one — put
+# it behind whatever proxy you already run. See docs/DEPLOYMENT.md.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: scopevisio-shopify-connector:latest
+    restart: unless-stopped
+
+    # Not "3000:3000". The container must not be reachable from outside the
+    # host directly — only through the proxy, which is what holds the
+    # certificate. Shopify will not talk to it over plain HTTP anyway.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    env_file:
+      - .env
+
+    environment:
+      # Set here rather than in .env so the path and the mount below cannot
+      # drift apart — the entrypoint derives the directory to chown from this.
+      DATABASE_URL: "file:/data/prod.sqlite"
+      NODE_ENV: production
+      PORT: "3000"
+
+    volumes:
+      - connector_data:/data
+
+    # Touches the database on purpose: the failure that matters is not "the
+    # process is up" but "the process is up and its volume is mounted".
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+# ⚠️ SQLite on one volume has exactly one writer. Do NOT run a second replica
+# of this service, and do not put it behind a load balancer with more than one
+# backend, without moving to Postgres first (docs/DEPLOYMENT.md).
+volumes:
+  connector_data:
+    # `docker compose down` keeps this. `docker compose down -v` destroys it,
+    # and with it every merchant connection and the double-booking guard.
+    name: scopevisio_connector_data
