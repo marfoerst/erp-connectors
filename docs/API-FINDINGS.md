@@ -41,6 +41,32 @@ Tokens are revocable by the customer at
 Refresh-token rotation removes the need to store the password after setup —
 relevant to the credential-custody expectation in the PRD.
 
+### ⚠️ The password grant was a choice, not a constraint (added 2026-09-13)
+
+Re-checked against the live spec. `POST /token` takes
+`grant_type` ∈ `password | refresh_token | authorization_code`, plus `code` and
+a `client_id` ("if not set, will revert to `sv`"). `securitySchemes` declares an
+OAuth2 **authorizationCode** flow with `authorizationUrl: /static/authorize.html`
+— which returns HTTP 200 — and all **321** operations carry
+`security: [{oauth: []}]`.
+
+So a delegated flow exists, where the tenant authenticates on a Scopevisio page
+instead of typing their ERP password into a connector. This connector should
+move to it. The password grant additionally **fails outright for tenants with
+TOTP enabled**, because `totpResponse` is a password-grant parameter.
+
+What the flow still lacks before it can carry a third-party ecosystem:
+
+| Gap | Evidence in the spec |
+|---|---|
+| No scopes | `"scopes": {}` — empty. A token is bounded only by the user's profiles |
+| No client registration | `client_id` defaults to `"sv"`, `client_secret` may be blank; connectors cannot be told apart or revoked individually |
+| No PKCE | no `pkce` / `code_challenge` anywhere in the 831 KB spec |
+
+Also confirmed absent spec-wide: `webhook`, `callbacks`, `subscription` (0
+occurrences each — `/events` is the calendar object, not a delivery channel) and
+any rate-limit documentation (`ratelimit`, `x-rate`: 0 occurrences).
+
 Every endpoint documents required Scopevisio **profiles** (e.g. `Kontakte
 (Bearbeiten)`, `Stammdaten, Steuermatrix (Anzeigen)`, `Datenimport
 (Bearbeiten)`). Insufficient profiles are the most likely cause of a failed

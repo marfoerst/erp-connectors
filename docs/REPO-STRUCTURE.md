@@ -88,8 +88,17 @@ cannot be withdrawn.
 From `docs/API-FINDINGS.md`, all of these apply to connector #2 as much as #1:
 
 - **No webhooks in OpenScope.** Anything Scopevisio→outward is polling.
-- **Auth is `grant_type=password`.** The connector handles the tenant's own
-  Scopevisio credentials until a refresh token is issued.
+- **Auth: the connector uses `grant_type=password`, but it did not have to.**
+  Verified against the live spec 2026-09-13: `POST /token` also accepts
+  `authorization_code`, `/static/authorize.html` is live, and all 321 operations
+  declare `security: [{oauth: []}]`. The password route also breaks for any
+  tenant with TOTP enabled, since `totpResponse` is password-grant only.
+  What the flow still lacks for third-party use: **no scopes** (`"scopes": {}`
+  is empty), **no real client registration** (`client_id` defaults to `"sv"`,
+  `client_secret` may be blank — individual connectors cannot be identified or
+  revoked) and **no PKCE**. Moving this connector to authorization_code is the
+  right first step, and defining scopes and client registration is the platform
+  ask.
 - **Per-endpoint profile requirements** are the most likely cause of a failed
   self-serve setup, and they fail in ways that look like connector bugs.
 - **No stock or inventory read anywhere in the API.** Any connector needing
