@@ -1,4 +1,17 @@
-# Scopevisio ERP Connector for Shopify
+# ERP Connectors
+
+Connectors that bring third-party systems into Scopevisio. This repository is
+where they all live.
+
+The first one is **Shopify** (`app/`), and everything below describes it. The
+intended shape of the repository as more arrive is in
+[`docs/REPO-STRUCTURE.md`](docs/REPO-STRUCTURE.md) — read that before adding a
+second connector, because roughly half of what is here is already
+connector-agnostic and should not be copied.
+
+---
+
+## Connector: Shopify
 
 Books Shopify orders into Scopevisio as Fakturen, with the customer set up as a
 debitor and the VAT treatment taken from the merchant's own Steuermatrix.
@@ -11,6 +24,7 @@ there are deliberately no Scopevisio tenant settings in `.env`.
 what is blocked on whom, the decisions already made, and the traps that already
 cost time.
 
+- `docs/REPO-STRUCTURE.md` — how connectors share code, and what to extract when
 - `docs/STATUS.md` — **state and handover; read this first**
 - `docs/PRD.md` — the product requirements: problem, outcomes, capabilities, metrics
 - `docs/API-FINDINGS.md` — what the OpenScope REST API does and does not support
