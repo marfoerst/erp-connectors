@@ -8,6 +8,7 @@ where they all live.
 | [Shopify](connectors/shopify/) | Built, not yet deployed | Custom (single-store) distribution |
 | [Shopware](connectors/shopware/) | Verified end to end against live Shopware and Scopevisio | No admin UI yet |
 | [n8n community node](connectors/n8n/) | Verified end to end in n8n 2.38.7 against live Scopevisio | Not published to npm, by decision — install from source. Standalone package, not a workspace member |
+| [Magento 2](connectors/magento/) | Verified end to end against Magento 2.4.9 and live Scopevisio | Magento extension + connector service, CSV delivery, German admin screens. Findings in [`docs/MAGENTO-FINDINGS.md`](docs/MAGENTO-FINDINGS.md) |
 
 Everything that is not about a particular shop system lives in
 [`packages/scopevisio-core`](packages/scopevisio-core/): the OpenScope client,

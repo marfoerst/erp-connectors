@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="scopevisio" translate="label" sortOrder="400">
+            <label>Scopevisio</label>
+        </tab>
+        <section id="scopevisio" translate="label" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+            <class>separator-top</class>
+            <label>ERP connection</label>
+            <tab>scopevisio</tab>
+            <resource>Scopevisio_Connector::config</resource>
+            <group id="general" translate="label comment" sortOrder="10" showInDefault="1">
+                <label>Connection</label>
+                <comment><![CDATA[Saving creates the <strong>Scopevisio</strong> integration under System &rarr; Integrations. Activate it there to connect this store: you will be asked for your Scopevisio login in a window served by the connector, never by Magento.]]></comment>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1">
+                    <label>Send paid invoices to Scopevisio</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Only invoices paid after this is first switched on are sent. Earlier invoices are never booked retroactively.</comment>
+                </field>
+                <field id="connector_url" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Connector URL</label>
+                    <validate>validate-url required-entry</validate>
+                    <comment>The address of the Scopevisio connector service, reachable both from this Magento server and from your browser.</comment>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -1,0 +1,5 @@
+generated/
+*.sqlite
+*.sqlite-journal
+.env
+e2e-*.csv

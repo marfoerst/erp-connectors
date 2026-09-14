@@ -17,12 +17,16 @@ export type {
 export { silentJournal } from "./ports";
 
 export * from "./crypto";
+export { scrub, scrubValue } from "./redact";
 export { formatGermanDate } from "./format";
 
 export * from "./tax-rules";
 export * from "./constants";
 
 export { upsertCustomer } from "./contacts";
+export { buildInvoiceDraft } from "./draft";
+export { draftsToCsv, CSV_COLUMNS } from "./csv";
+export type { CsvOptions } from "./csv";
 export type { UpsertResult, CustomerSettings } from "./contacts";
 
 export {

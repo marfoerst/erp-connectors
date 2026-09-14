@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+    Global, not adminhtml: invoices are paid from the storefront (online
+    capture at checkout), the admin, the REST API and cron alike.
+
+    *_save_commit_after rather than sales_order_invoice_pay: `pay` fires before
+    the invoice is saved and inside a transaction that can still roll back, so
+    an outbox row written there could point at an invoice that never existed.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="sales_order_invoice_save_commit_after">
+        <observer name="scopevisio_connector_invoice_saved"
+                  instance="Scopevisio\Connector\Observer\InvoiceSaved"/>
+    </event>
+    <event name="sales_order_creditmemo_save_commit_after">
+        <observer name="scopevisio_connector_creditmemo_saved"
+                  instance="Scopevisio\Connector\Observer\CreditmemoSaved"/>
+    </event>
+</config>

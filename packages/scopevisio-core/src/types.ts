@@ -129,11 +129,15 @@ export interface PersonalAccountForm {
   contoProDiverse?: boolean;
 }
 
+/** Observed: {"status":201,"number":"10087","created":true,"errors":{}} */
 export interface PersonalAccountResponse {
   personalAccountNumber?: string;
   accountNumber?: string;
   number?: string;
   id?: number;
+  status?: number;
+  created?: boolean;
+  errors?: Record<string, unknown>;
 }
 
 /** POST /outgoinginvoices/import — OutgoingInvoiceImportForm */
@@ -197,6 +201,15 @@ export interface ResolvedTaxTreatment {
 /** A minimal view of the Shopify order fields the connector consumes. */
 export interface OrderLike {
   id: string;
+  /**
+   * Identity for a guest's contact, when it must differ from `id`.
+   *
+   * A guest has no customer record, so the contact is keyed on the order. A
+   * connector that books per invoice rather than per order (Magento: one order
+   * can carry several invoices) passes the order here, so two partial invoices
+   * of one guest order land on one contact rather than two.
+   */
+  guestKey?: string;
   name?: string;
   orderNumber?: number | string;
   createdAt?: string;

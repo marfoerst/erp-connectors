@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+  // Explicit output: every connector in the workspace generates a client, and
+  // without this they would overwrite each other in node_modules/.prisma.
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  // ⚠️ PRODUCTION: must point at a persistent volume. Losing SyncRecord loses
+  // the double-booking guard, and under GoBD a duplicate posting cannot be
+  // withdrawn — only corrected with a credit note.
+  url      = env("DATABASE_URL")
+}
+
+/// One Magento installation that activated the Scopevisio integration.
+///
+/// Identified by the OAuth consumer key Magento generated for the integration.
+/// The consumer secret is what Magento signs webhooks and admin links with, so
+/// no second shared secret has to be configured anywhere.
+model MagentoStore {
+  id           String  @id @default(cuid())
+  consumerKey  String  @unique
+  /// All encrypted with SCOPEVISIO_ENCRYPTION_KEY (AES-256-GCM).
+  consumerSecretEnc    String
+  accessTokenEnc       String?
+  accessTokenSecretEnc String?
+  /// What Magento reported as its base URL during activation.
+  storeBaseUrl String
+  /// handshake | active | failed | inactive
+  status       String  @default("handshake")
+  statusDetail String?
+  /// When the last OAuth exchange succeeded. Bounds the unsigned activation popup.
+  activatedAt  DateTime?
+  /// Start of the last successful intake poll. The next one overlaps it.
+  lastPolledAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection ScopevisioConnection?
+  settings   ScopevisioSettings?
+}
+
+/// The merchant's Scopevisio credentials, one per store.
+model ScopevisioConnection {
+  id      String       @id @default(cuid())
+  storeId String       @unique
+  store   MagentoStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  baseUrl      String @default("https://appload.scopevisio.com")
+  customer     String
+  organisation String @default("")
+  username     String
+  passwordEnc          String?
+  refreshTokenEnc      String?
+  accessTokenEnc       String?
+  accessTokenExpiresAt DateTime?
+
+  status       String  @default("unverified")
+  statusDetail String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Per-store mapping decisions. Mirrors the other connectors' settings.
+model ScopevisioSettings {
+  id      String       @id @default(cuid())
+  storeId String       @unique
+  store   MagentoStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  syncEnabled Boolean @default(false)
+  /// Leave off until the review queue has been reliably empty. A posted
+  /// document cannot be withdrawn. Only meaningful for deliveryMode "api".
+  autoPost    Boolean @default(false)
+  /// csv — drafts are exported and imported by the bookkeeper (works today).
+  /// api — OpenScope XML import (blocked upstream, holds every invoice).
+  deliveryMode String @default("csv")
+
+  homeCountry        String  @default("DE")
+  ossRegistered      Boolean @default(false)
+  customerGroup      String  @default("Magento")
+  guestCustomerGroup String  @default("Magento Gast")
+  guestUseCpd        Boolean @default(true)
+  numberRangeNumber  Int?
+  taxToleranceCents  Int     @default(2)
+
+  vatScopeDomestic     Int?
+  vatScopeEuB2c        Int?
+  vatScopeEuB2cOss     Int?
+  vatScopeEuB2bReverse Int?
+  vatScopeThirdCountry Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// The idempotency guard. One row per Magento invoice, ever.
+///
+/// Magento's "paid" is an invoice, not an order: one order can be invoiced in
+/// several parts, and each part is its own document with its own amounts. So
+/// the natural key is the invoice, and the order is kept for reference.
+model SyncRecord {
+  id      String @id @default(cuid())
+  storeId String
+
+  /// `invoice:<entity_id>`
+  externalId  String
+  /// Invoice increment id, as printed on Magento's own invoice.
+  externalRef String?
+  orderId     Int?
+  orderRef    String?
+
+  /// pending | ready_to_export | exported | booked | held | declined
+  state  String  @default("pending")
+  reason String?
+  detail String?
+
+  contactId       Int?
+  personalAccount String?
+  documentNumber  String?
+
+  vatScopeUsed Int?
+  countryUsed  String?
+
+  draftJson String?
+
+  sourceTaxCents Int?
+  erpTaxCents    Int?
+
+  exportBatch       String?
+  exportedAt        DateTime?
+  importConfirmedAt DateTime?
+  importConfirmedBy String?
+
+  attempts    Int       @default(0)
+  lastTriedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([storeId, externalId])
+  @@index([storeId, state])
+  @@index([storeId, orderId])
+}
+
+/// One row per Magento credit memo the connector has seen, whatever it did
+/// with it. The idempotency guard for refunds, as SyncRecord is for invoices.
+model RefundRecord {
+  id      String @id @default(cuid())
+  storeId String
+
+  /// `creditmemo:<entity_id>`
+  externalId        String
+  externalRef       String?
+  invoiceExternalId String?
+  orderId           Int?
+
+  /// withdrawn | held | credit_note_required | unknown_invoice | not_found
+  outcome String
+  detail  String
+
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, externalId])
+}
+
+/// Append-only journal. Never mutated.
+model SyncEvent {
+  id      String @id @default(cuid())
+  storeId String
+
+  level      String  @default("info")
+  event      String
+  message    String
+  externalId String?
+  data       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt])
+}
+
+/// VIES results, kept with their timestamp because validity *at the time of
+/// supply* is what governs reverse charge — not validity today.
+model VatIdCheck {
+  id      String  @id @default(cuid())
+  storeId String
+  vatId   String
+  valid   Boolean
+  detail  String?
+
+  checkedAt DateTime @default(now())
+
+  @@index([storeId, vatId, checkedAt])
+}

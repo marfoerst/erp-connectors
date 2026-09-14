@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="scopevisio_outbox_deliver" instance="Scopevisio\Connector\Cron\Deliver" method="execute">
+            <schedule>* * * * *</schedule>
+        </job>
+        <!-- Catches anything the observer missed: an exception on the save path,
+             an invoice written by a direct SQL import, or the module being
+             briefly disabled. -->
+        <job name="scopevisio_outbox_sweep" instance="Scopevisio\Connector\Cron\Sweep" method="execute">
+            <schedule>*/15 * * * *</schedule>
+        </job>
+    </group>
+</config>

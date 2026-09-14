@@ -1,0 +1,66 @@
+# Local Magento 2.4.9 with Luma sample data, for testing the connector.
+#
+#   docker compose -f connectors/magento/dev/docker-compose.yml up -d --build
+#   docker compose -f connectors/magento/dev/docker-compose.yml exec magento bash /dev-scripts/install-magento.sh
+#
+# Storefront http://localhost:8080/  ·  Admin http://localhost:8080/admin (admin / see install script)
+#
+# The extension is bind-mounted into app/code, so edits apply without copying.
+name: scopevisio-magento
+
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: magento
+      MARIADB_USER: magento
+      MARIADB_PASSWORD: magento
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.2
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms1g -Xmx1g"
+    volumes:
+      - opensearch:/usr/share/opensearch/data
+
+  magento:
+    build:
+      context: .
+      dockerfile: Dockerfile.magento
+    depends_on:
+      db:
+        condition: service_healthy
+      opensearch:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    volumes:
+      - code:/var/www/html
+      - ../extension:/var/www/html/app/code/Scopevisio/Connector
+      - ./:/dev-scripts:ro
+    # Magento's cron drives the connector's outbox. Before installation the
+    # command fails quietly, which is fine.
+    command:
+      - bash
+      - -c
+      - |
+        (while true; do
+           su www-data -s /bin/bash -c 'php /var/www/html/bin/magento cron:run' > /dev/null 2>&1
+           sleep 60
+         done) &
+        exec apache2-foreground
+
+volumes:
+  db:
+  opensearch:
+  code:

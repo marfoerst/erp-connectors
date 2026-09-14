@@ -152,5 +152,10 @@ Worth knowing before concluding that a webhook subscription is broken.
   (`docs/API-FINDINGS.md` §7). Until that is resolved the connector holds rather
   than reporting a success it cannot confirm — the endpoint answers HTTP 200
   with an empty array for a document it did not understand.
-- **No CSV delivery path yet.** The Shopify connector's exists and should move
-  into core rather than being written a second time.
+- **No CSV delivery path yet.** The renderer is now in core (`draftsToCsv`); what
+  is missing is the batch lifecycle, and `connectors/magento/src/export.ts` is
+  the one to adapt.
+- **Concurrent syncs.** Scopevisio lost a debitor account under concurrent
+  `/createdebitor` calls (`docs/MAGENTO-FINDINGS.md` §1). Core now verifies the
+  account, but this connector still processes webhooks in parallel; the Magento
+  connector serialises per store and this one should too.

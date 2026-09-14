@@ -6,7 +6,8 @@
   "workspaces": [
     "packages/*",
     "connectors/shopify",
-    "connectors/shopware"
+    "connectors/shopware",
+    "connectors/magento"
   ],
   "engines": {
     "node": ">=20.19 <22 || >=22.12"
@@ -17,7 +18,8 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "npm run --workspace @erp/connector-shopify",
-    "shopware": "npm run --workspace @erp/connector-shopware"
+    "shopware": "npm run --workspace @erp/connector-shopware",
+    "magento": "npm run --workspace @erp/connector-magento"
   },
   "devDependencies": {
     "@types/node": "^22.2.0",

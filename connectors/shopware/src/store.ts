@@ -1,4 +1,6 @@
 import {
+  scrub,
+  scrubValue,
   ScopevisioClient,
   type ConnectionRecord,
   type ConnectionStore,
@@ -40,35 +42,8 @@ export function connectionStore(shopId: string): ConnectionStore {
   };
 }
 
-/**
- * Redacts credentials before anything reaches the journal.
- *
- * Key-only redaction is not enough: access tokens have turned up embedded in
- * URLs (`?access_token=…`) and inside error bodies (`Bearer …`). This scrubs
- * values as well as keys, which is the lesson the Shopify connector learned the
- * expensive way.
- */
-const SENSITIVE_KEY = /pass|secret|token|authorization|apikey|api_key/i;
-
-export function scrubValue(value: string): string {
-  return value
-    .replace(/(access_token|refresh_token|password|secret|api_key|apiKey)=[^&\s"']+/gi, "$1=***")
-    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/g, "Bearer ***");
-}
-
-export function scrub(input: unknown, depth = 0): unknown {
-  if (depth > 6) return "[deep]";
-  if (typeof input === "string") return scrubValue(input);
-  if (Array.isArray(input)) return input.map((v) => scrub(v, depth + 1));
-  if (input && typeof input === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-      out[k] = SENSITIVE_KEY.test(k) ? "***" : scrub(v, depth + 1);
-    }
-    return out;
-  }
-  return input;
-}
+// Redaction lives in core so the connectors cannot drift apart on it.
+export { scrub, scrubValue };
 
 export function journal(shopId: string): Journal {
   return {

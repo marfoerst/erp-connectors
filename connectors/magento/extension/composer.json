@@ -1,0 +1,24 @@
+{
+    "name": "scopevisio/module-connector",
+    "description": "Sends paid Magento invoices and credit memos to the Scopevisio ERP connector.",
+    "type": "magento2-module",
+    "license": "proprietary",
+    "version": "0.1.0",
+    "require": {
+        "php": "~8.2.0||~8.3.0||~8.4.0",
+        "magento/framework": "*",
+        "magento/module-backend": "*",
+        "magento/module-config": "*",
+        "magento/module-integration": "*",
+        "magento/module-sales": "*",
+        "magento/module-store": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Scopevisio\\Connector\\": ""
+        },
+        "files": [
+            "registration.php"
+        ]
+    }
+}

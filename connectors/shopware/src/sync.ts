@@ -1,14 +1,12 @@
 import {
+  buildInvoiceDraft,
   createInvoice,
   determineTaxTreatment,
-  formatGermanDate,
   postInvoice,
   ScopevisioError,
   taxChecksum,
   upsertCustomer,
-  type InvoiceDraft,
   type OrderLike,
-  type ResolvedTaxTreatment,
 } from "@erp/scopevisio-core";
 
 import prisma from "./db.js";
@@ -50,37 +48,6 @@ export interface ShopwareSettings {
   vatScopeEuB2cOss: number | null;
   vatScopeEuB2bReverse: number | null;
   vatScopeThirdCountry: number | null;
-}
-
-/** Build the delivery-agnostic draft. Same shape both connectors produce. */
-export function buildDraft(args: {
-  order: OrderLike;
-  treatment: ResolvedTaxTreatment;
-  documentDate: Date;
-  contactId: number | null;
-  personalAccount: string | null;
-}): InvoiceDraft {
-  const { order, treatment, documentDate, contactId, personalAccount } = args;
-  return {
-    externalId: order.id,
-    externalRef: order.name ?? null,
-    documentDate: formatGermanDate(documentDate),
-    contactId,
-    personalAccount,
-    country: treatment.country ?? null,
-    taxCase: treatment.taxCase ?? null,
-    vatScope: treatment.vatScope ?? null,
-    account: treatment.account ?? null,
-    vatKey: treatment.vatKey ?? null,
-    currency: order.currencyCode ?? "EUR",
-    positions: order.lineItems.map((li) => ({
-      name: li.title,
-      number: li.sku ?? null,
-      quantity: li.quantity,
-      singleAmount: li.unitAmount,
-    })),
-    sourceTaxCents: order.totalTaxCents ?? null,
-  };
 }
 
 async function recordSkip(
@@ -213,7 +180,7 @@ export async function syncOrder(shopId: string, order: OrderLike): Promise<SyncO
       },
     });
 
-    const draft = buildDraft({
+    const draft = buildInvoiceDraft({
       order,
       treatment,
       documentDate,

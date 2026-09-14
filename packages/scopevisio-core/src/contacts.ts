@@ -69,7 +69,7 @@ export async function upsertCustomer(
    * guest order created another contact (observed live: two identical guest
    * contacts from two runs).
    */
-  const gid = order.customer?.id ?? `guest:${order.id}`;
+  const gid = order.customer?.id ?? `guest:${order.guestKey ?? order.id}`;
 
   // 1. Exact lookup by the identity key. Applies to guests too, so replaying
   //    the same order reuses the same contact.
@@ -232,7 +232,8 @@ async function createContact(
     tags,
     vatId: order.vatId ?? undefined,
     currency: order.currencyCode,
-    description: `Created by the Shopify connector from order ${order.name ?? order.id}.`,
+    // Every connector used to write "Shopify" here, Shopware's contacts included.
+    description: `Created by the ${source} connector from order ${order.name ?? order.id}.`,
   };
 
   const res = await client.post<ContactNewResponse>("/contact/new", form);
@@ -261,6 +262,14 @@ function addressFields(addr: AddressLike | null) {
 /**
  * `POST /createdebitor` is documented as a no-op when the contact already is a
  * debitor, which is what makes this two-call sequence safe to retry.
+ *
+ * ⚠️ Its answer is not proof. Observed live on 2026-09-14 while the Magento
+ * connector created several contacts at once: one call answered with debitor
+ * number 10086 that was never persisted (the contact had no account at all, and
+ * 10086 was later given to somebody else), another answered with no number. An
+ * invoice built on either would name a debitor that does not exist, or none.
+ * So the account is read back, and a missing one is retried once and then
+ * thrown — the invoice is retried later rather than booked without a debitor.
  */
 async function ensureDebitor(
   ctx: ScopevisioContext,
@@ -280,20 +289,67 @@ async function ensureDebitor(
     currency: order.currencyCode,
   };
 
-  try {
-    const res = await client.post<PersonalAccountResponse>("/createdebitor", form);
-    return res?.personalAccountNumber ?? res?.accountNumber ?? res?.number ?? undefined;
-  } catch (err) {
-    if (err instanceof ScopevisioError && err.merchantActionable) {
-      throw new ScopevisioError(
-        `Scopevisio refused to create the debitor account for contact ${contactId}. ` +
-          `The connector user needs the "Datenimport (Bearbeiten)" and ` +
-          `"Kontakte bearbeiten (Bearbeiten)" profiles. Original message: ${err.message}`,
-        err.status,
-        err.body,
-        true,
-      );
+  let problem = "";
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let res: PersonalAccountResponse;
+    try {
+      res = await client.post<PersonalAccountResponse>("/createdebitor", form);
+    } catch (err) {
+      if (err instanceof ScopevisioError && err.merchantActionable) {
+        throw new ScopevisioError(
+          `Scopevisio refused to create the debitor account for contact ${contactId}. ` +
+            `The connector user needs the "Datenimport (Bearbeiten)" and ` +
+            `"Kontakte bearbeiten (Bearbeiten)" profiles. Original message: ${err.message}`,
+          err.status,
+          err.body,
+          true,
+        );
+      }
+      throw err;
     }
-    throw err;
+
+    const errors = res?.errors && typeof res.errors === "object" ? Object.values(res.errors).filter(Boolean) : [];
+    const number = res?.personalAccountNumber ?? res?.accountNumber ?? res?.number ?? undefined;
+
+    if (errors.length === 0 && number) {
+      const exists = await debitorExists(client, contactId, String(number));
+      if (exists !== false) return String(number);
+      problem = `Scopevisio reported debitor ${number} for contact ${contactId}, but no such account exists.`;
+    } else {
+      problem = errors.length
+        ? `Scopevisio did not create a debitor for contact ${contactId}: ${JSON.stringify(res.errors)}`
+        : `Scopevisio returned no debitor number for contact ${contactId}.`;
+    }
+    await ctx.journal.event({
+      level: "warn",
+      event: "debitor.unconfirmed",
+      externalId: order.id,
+      message: `${problem} (attempt ${attempt})`,
+      data: res,
+    });
+  }
+
+  throw new ScopevisioError(`${problem} Nothing was booked; the invoice will be retried.`);
+}
+
+/**
+ * Whether the contact holds that debitor account. `null` when the check itself
+ * could not run (e.g. the user lacks the profile to read debitor accounts) —
+ * an unavailable check must not block every booking.
+ */
+async function debitorExists(
+  client: ScopevisioClient,
+  contactId: number,
+  number: string,
+): Promise<boolean | null> {
+  try {
+    const res = await client.search<{ records?: Array<{ number?: string | number }> }>("/debitoraccounts", {
+      search: [{ field: "contactId", value: String(contactId), operator: "equal" }],
+      pageSize: 10,
+      formatValues: false,
+    });
+    return (res?.records ?? []).some((r) => String(r.number) === number);
+  } catch {
+    return null;
   }
 }

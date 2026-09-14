@@ -1,0 +1,100 @@
+<?php
+/** @var \Scopevisio\Connector\Block\Adminhtml\Dashboard $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$counts = $block->getCounts();
+$connected = $block->isConnected();
+?>
+<style>
+    .sv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .sv-card { border: 1px solid #ccc; padding: 1rem 1.25rem; background: #fff; }
+    .sv-card h3 { margin: 0 0 .5rem; font-size: 1.4rem; }
+    .sv-num { font-size: 2.4rem; font-weight: 600; }
+    .sv-ok { color: #185b00; } .sv-warn { color: #7a4b00; } .sv-bad { color: #b30000; }
+    .sv-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 0 0 2rem; }
+    .sv-actions form { margin: 0; }
+    .sv-muted { color: #666; }
+</style>
+
+<div class="sv-grid">
+    <div class="sv-card">
+        <h3><?= $escaper->escapeHtml(__('Connection')) ?></h3>
+        <?php if (!$block->isEnabled()): ?>
+            <p class="sv-warn"><?= $escaper->escapeHtml(__('Switched off.')) ?></p>
+            <p><a href="<?= $escaper->escapeUrl($block->getConfigUrl()) ?>"><?= $escaper->escapeHtml(__('Configure')) ?></a></p>
+        <?php elseif (!$block->hasIntegration()): ?>
+            <p class="sv-warn"><?= $escaper->escapeHtml(__('The integration has not been created yet. Save the configuration once.')) ?></p>
+            <p><a href="<?= $escaper->escapeUrl($block->getConfigUrl()) ?>"><?= $escaper->escapeHtml(__('Configure')) ?></a></p>
+        <?php elseif (!$connected): ?>
+            <p class="sv-warn"><?= $escaper->escapeHtml(__('Not activated. Events are kept until you activate the integration.')) ?></p>
+            <p><a href="<?= $escaper->escapeUrl($block->getIntegrationsUrl()) ?>"><?= $escaper->escapeHtml(__('System > Integrations')) ?></a></p>
+        <?php else: ?>
+            <p class="sv-ok"><?= $escaper->escapeHtml(__('Connected')) ?></p>
+            <p class="sv-muted"><?= $escaper->escapeHtml($block->getConnectorUrl()) ?></p>
+        <?php endif; ?>
+        <?php if ($block->getSyncFrom()): ?>
+            <p class="sv-muted"><?= $escaper->escapeHtml(__('Invoices paid since %1 (UTC)', $block->getSyncFrom())) ?></p>
+        <?php endif; ?>
+    </div>
+    <div class="sv-card">
+        <h3><?= $escaper->escapeHtml(__('Waiting')) ?></h3>
+        <div class="sv-num"><?= (int)$counts['pending'] ?></div>
+    </div>
+    <div class="sv-card">
+        <h3><?= $escaper->escapeHtml(__('Delivered')) ?></h3>
+        <div class="sv-num sv-ok"><?= (int)$counts['delivered'] ?></div>
+    </div>
+    <div class="sv-card">
+        <h3><?= $escaper->escapeHtml(__('Failed')) ?></h3>
+        <div class="sv-num <?= $counts['failed'] > 0 ? 'sv-bad' : '' ?>"><?= (int)$counts['failed'] ?></div>
+    </div>
+</div>
+
+<div class="sv-actions">
+    <?php if ($connected): ?>
+        <a class="action-primary" style="padding:.6rem 1.4rem;display:inline-block" target="_blank" rel="noopener"
+           href="<?= $escaper->escapeUrl($block->getOpenUrl()) ?>"><?= $escaper->escapeHtml(__('Open review queue and CSV export')) ?></a>
+    <?php endif; ?>
+    <form method="post" action="<?= $escaper->escapeUrl($block->getDeliverUrl()) ?>">
+        <?= $block->getBlockHtml('formkey') ?>
+        <button type="submit" class="action-secondary"><?= $escaper->escapeHtml(__('Send now')) ?></button>
+    </form>
+    <?php if ($counts['failed'] > 0): ?>
+        <form method="post" action="<?= $escaper->escapeUrl($block->getDeliverUrl()) ?>">
+            <?= $block->getBlockHtml('formkey') ?>
+            <input type="hidden" name="retry_failed" value="1"/>
+            <button type="submit" class="action-secondary"><?= $escaper->escapeHtml(__('Retry failed events')) ?></button>
+        </form>
+    <?php endif; ?>
+</div>
+
+<p class="sv-muted"><?= $escaper->escapeHtml(__('Magento only hands events over. Whether an invoice was booked, held for review or exported is shown in the connector.')) ?></p>
+
+<table class="data-grid">
+    <thead>
+    <tr>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Event')) ?></th>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Entity')) ?></th>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Order')) ?></th>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Status')) ?></th>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Attempts')) ?></th>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Created (UTC)')) ?></th>
+        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Last error')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($block->getRecent() as $row): ?>
+        <tr>
+            <td><?= $escaper->escapeHtml($row['event']) ?></td>
+            <td><?= (int)$row['entity_id'] ?></td>
+            <td><?= (int)$row['order_id'] ?></td>
+            <td><?= $escaper->escapeHtml($row['status']) ?></td>
+            <td><?= (int)$row['attempts'] ?></td>
+            <td><?= $escaper->escapeHtml($row['created_at']) ?></td>
+            <td><?= $escaper->escapeHtml((string)$row['last_error']) ?></td>
+        </tr>
+    <?php endforeach; ?>
+    <?php if (!$block->getRecent()): ?>
+        <tr><td colspan="7" class="sv-muted"><?= $escaper->escapeHtml(__('No events yet.')) ?></td></tr>
+    <?php endif; ?>
+    </tbody>
+</table>

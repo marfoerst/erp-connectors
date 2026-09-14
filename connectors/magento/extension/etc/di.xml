@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="scopevisio_integration_setup" xsi:type="object">Scopevisio\Connector\Console\Command\SetupCommand</item>
+                <item name="scopevisio_outbox_deliver" xsi:type="object">Scopevisio\Connector\Console\Command\DeliverCommand</item>
+            </argument>
+        </arguments>
+    </type>
+    <!-- Console commands are constructed on every bin/magento call, including
+         setup:install before a database exists; proxies defer the real work. -->
+    <type name="Scopevisio\Connector\Console\Command\SetupCommand">
+        <arguments>
+            <argument name="provisioner" xsi:type="object">Scopevisio\Connector\Model\IntegrationProvisioner\Proxy</argument>
+            <argument name="config" xsi:type="object">Scopevisio\Connector\Model\Config\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Scopevisio\Connector\Console\Command\DeliverCommand">
+        <arguments>
+            <argument name="delivery" xsi:type="object">Scopevisio\Connector\Model\Delivery\Proxy</argument>
+            <argument name="outbox" xsi:type="object">Scopevisio\Connector\Model\Outbox\Proxy</argument>
+        </arguments>
+    </type>
+</config>

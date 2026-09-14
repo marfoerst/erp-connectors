@@ -38,6 +38,8 @@ packages/
 connectors/
   shopify/           Remix app: OAuth, webhooks, order intake, Polaris admin
   shopware/          HTTP service: app handshake, signed webhooks, Admin API
+  magento/           Magento 2 extension (outbox, integration, admin link) +
+                     HTTP service: OAuth 1.0a handshake, sync, CSV, screens
   n8n/               n8n community node — standalone, see below
 docs/
 research/
@@ -71,8 +73,8 @@ otherwise need are supplied as ports (`packages/scopevisio-core/src/ports.ts`):
 | `Journal` | `event(entry)` — append-only, credential-redacting |
 
 Each connector's adapter is about sixty lines:
-`connectors/shopify/app/scopevisio/core.server.ts` and
-`connectors/shopware/src/store.ts`. The only real difference between them is the
+`connectors/shopify/app/scopevisio/core.server.ts`,
+`connectors/shopware/src/store.ts` and `connectors/magento/src/store.ts`. The only real difference between them is the
 tenant key — a myshopify domain versus a Shopware `shopId`.
 
 Operations take a `ScopevisioContext` (`{ client, journal }`) rather than a
@@ -94,11 +96,20 @@ tenant id, so core never has to know how a connector identifies its tenants.
 
 ## Still connector-local, and why
 
-`csv-export.server.ts`, `masterdata.server.ts`, `intake.server.ts` and the
-readiness check remain in the Shopify connector because they are bound to its
-Prisma schema. **CSV delivery in particular should move to core** rather than
-being written a second time — the Shopware connector does not have it yet, and
-that is the next piece of extraction, not an invitation to duplicate.
+`masterdata.server.ts`, `intake.server.ts` and the readiness check remain in
+the Shopify connector because they are bound to its Prisma schema.
+
+**Moved to core with the Magento connector** (2026-09-14), so the third
+connector did not become the third copy:
+
+- `buildInvoiceDraft` — every connector had its own identical `buildDraft`.
+- `draftsToCsv` — the CSV renderer. The batch lifecycle (exported, confirmed,
+  returned) stays local because it is state in each connector's schema; the
+  Magento connector's `src/export.ts` is the one to copy for Shopware.
+- `scrub` / `scrubValue` — journal redaction. Shopware now re-exports it.
+- `ensureDebitor` now **reads the debitor account back** before trusting
+  `/createdebitor`, after Scopevisio answered with a number it never persisted
+  (`docs/MAGENTO-FINDINGS.md` §1). Every connector gets that fix.
 
 ## Schema: two shapes, deliberately
 

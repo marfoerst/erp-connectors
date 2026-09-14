@@ -1,9 +1,14 @@
 import crypto from "node:crypto";
 
-import type { InvoiceDraft , OrderLike, ResolvedTaxTreatment } from "@erp/scopevisio-core";
+import {
+  buildInvoiceDraft,
+  draftsToCsv as renderCsv,
+  type InvoiceDraft,
+  type OrderLike,
+  type ResolvedTaxTreatment,
+} from "@erp/scopevisio-core";
 
 import prisma from "../db.server";
-import { formatGermanDate } from "./masterdata.server";
 import { logEvent } from "./log.server";
 
 export type { InvoiceDraft };
@@ -37,103 +42,12 @@ export function buildDraft(
   contactId: number | null,
   personalAccount: string | null,
 ): InvoiceDraft {
-  return {
-    externalId: order.id,
-    externalRef: order.name ?? null,
-    documentDate: formatGermanDate(documentDate),
-    contactId,
-    personalAccount,
-    country: treatment.country ?? null,
-    taxCase: treatment.taxCase ?? null,
-    vatScope: treatment.vatScope ?? null,
-    account: treatment.account ?? null,
-    vatKey: treatment.vatKey ?? null,
-    currency: order.currencyCode ?? "EUR",
-    positions: order.lineItems.map((l) => ({
-      name: l.title,
-      number: l.sku ?? null,
-      quantity: l.quantity,
-      singleAmount: l.unitAmount,
-    })),
-    sourceTaxCents: order.totalTaxCents ?? null,
-  };
+  return buildInvoiceDraft({ order, treatment, documentDate, contactId, personalAccount });
 }
 
-/**
- * Column headers use the Scopevisio field names so the mapping step in the
- * client importer is one-to-one wherever possible. The importer lets the
- * bookkeeper remap columns, which is what makes this robust to any naming
- * difference.
- */
-const COLUMNS = [
-  "customerContactId",
-  "customerPersonalAccountNumber",
-  "documentDate",
-  "reference",
-  "text",
-  "currency",
-  "taxCountryCodeIso2",
-  "number",
-  "name",
-  "quantity",
-  "singleAmount",
-  "account",
-  "vatKey",
-] as const;
-
-function escapeCsv(s: string): string {
-  return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/** Plain text or an id — never reformatted as a decimal. */
-function cell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  return escapeCsv(String(value));
-}
-
-/** A money amount: always two decimals, German comma separator. */
-function money(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  return escapeCsv(value.toFixed(2).replace(".", ","));
-}
-
-/** A quantity: integers stay integral, fractions use a comma. */
-function qty(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  return escapeCsv(
-    Number.isInteger(value) ? String(value) : String(value).replace(".", ","),
-  );
-}
-
+/** The renderer lives in core, shared with every connector. */
 export function draftsToCsv(drafts: InvoiceDraft[]): string {
-  const lines: string[] = [COLUMNS.join(";")];
-
-  for (const d of drafts) {
-    // One row per position; document fields repeat, which is how flat
-    // billing-document imports are shaped.
-    for (const p of d.positions) {
-      lines.push(
-        [
-          cell(d.contactId),
-          cell(d.personalAccount),
-          cell(d.documentDate),
-          cell(d.externalId),
-          cell(d.externalRef ? `Shopify ${d.externalRef}` : ""),
-          cell(d.currency),
-          cell(d.country),
-          cell(p.number),
-          cell(p.name),
-          qty(p.quantity),
-          money(p.singleAmount),
-          cell(d.account),
-          cell(d.vatKey),
-        ].join(";"),
-      );
-    }
-  }
-
-  // A BOM so Excel on Windows reads it as UTF-8 rather than mangling umlauts.
-  return "﻿" + lines.join("\r\n") + "\r\n";
+  return renderCsv(drafts, { sourceLabel: "Shopify" });
 }
 
 /** Orders whose draft is complete and which are waiting to be delivered. */
