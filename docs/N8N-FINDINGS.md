@@ -74,14 +74,29 @@ contact `101074`, and the cursor advanced to it.
 - No environment variable or file access.
 - MIT licence, English only, one service.
 - `n8n-node lint` passes in strict mode.
-- `@n8n/scan-community-package` — n8n's verification scan — could not be run.
-  Pointed at the local package it printed nothing but npm warnings, and its
-  `--help` did the same, so whether it accepts an unpublished package is
-  unconfirmed. Run it against the package name once published.
-- Publishing must go through a GitHub Action with provenance (mandatory since
-  1 May 2026). The scaffold's workflows sit in `connectors/n8n/.github/` and do
-  not run from a subfolder; they need moving to the repository root, or the
-  package to its own repository, before the first release.
+## Publishing: deliberately not done
+
+**Decision, 14 September 2026: the node is not published to npm for now.** It is
+installed from source (see `connectors/n8n/README.md`). The code is built to
+n8n's verification standard, so publishing later is a release task, not a
+rework — but these steps are outstanding and were not attempted:
+
+1. **Publish through a GitHub Action with provenance** — mandatory for verified
+   community nodes since 1 May 2026. The scaffold's `ci.yml` and `publish.yml`
+   sit in `connectors/n8n/.github/workflows/`, where GitHub does not run them.
+   Move them to the repository root with the working directory set, or give the
+   package its own repository.
+2. **Make the repository public.** Verification requires the npm package's
+   repository link to resolve to a public repo with a matching maintainer.
+3. **Run `@n8n/scan-community-package n8n-nodes-scopevisio`** after publishing.
+   Against the local package it printed nothing but npm warnings, so it has not
+   been run successfully.
+4. **Replace the placeholder icon.** The node uses a neutral "S" mark, not
+   Scopevisio's logo, to avoid shipping a trademark without clearance.
+5. **Confirm the author and copyright lines** in `package.json` and `LICENSE`.
+   The author came from local git config when the package was scaffolded.
+6. **Look at it in the editor.** The editor was checked through n8n's API — node
+   types, credential and icons all load — but not visually.
 
 ## Test data left in the Scopevisio test tenant
 

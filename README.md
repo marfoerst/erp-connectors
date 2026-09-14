@@ -7,7 +7,7 @@ where they all live.
 |---|---|---|
 | [Shopify](connectors/shopify/) | Built, not yet deployed | Custom (single-store) distribution |
 | [Shopware](connectors/shopware/) | Verified end to end against live Shopware and Scopevisio | No admin UI yet |
-| [n8n community node](connectors/n8n/) | Verified end to end in n8n 2.38.7 against live Scopevisio | Standalone npm package, not a workspace member |
+| [n8n community node](connectors/n8n/) | Verified end to end in n8n 2.38.7 against live Scopevisio | Not published to npm, by decision — install from source. Standalone package, not a workspace member |
 
 Everything that is not about a particular shop system lives in
 [`packages/scopevisio-core`](packages/scopevisio-core/): the OpenScope client,

@@ -12,9 +12,31 @@ appear.
 
 ## Installation
 
-In n8n, go to **Settings → Community Nodes → Install** and enter
-`n8n-nodes-scopevisio`. See n8n's
-[community node installation guide](https://docs.n8n.io/integrations/community-nodes/installation/).
+**Not published to npm.** This package is deliberately not released yet, so it
+cannot be installed from **Settings → Community Nodes**. Install it from source
+into a self-hosted n8n:
+
+```bash
+# in connectors/n8n
+npm install
+npm run build
+npm pack                                   # → n8n-nodes-scopevisio-0.1.0.tgz
+```
+
+Then install the tarball into n8n's community-nodes folder and restart n8n:
+
+```bash
+mkdir -p ~/.n8n/nodes && cd ~/.n8n/nodes
+[ -f package.json ] || npm init -y
+npm install --legacy-peer-deps /path/to/n8n-nodes-scopevisio-0.1.0.tgz
+```
+
+In Docker, do the same inside the container's `/home/node/.n8n/nodes` — the
+end-to-end harness in [`e2e/README.md`](e2e/README.md) shows a working command.
+`--legacy-peer-deps` stops npm from installing its own copy of `n8n-workflow`,
+which n8n already provides.
+
+For development, `npm run dev` starts a local n8n with the node hot-reloaded.
 
 ## Credentials
 
