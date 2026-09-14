@@ -9,3 +9,6 @@ shopify-app-remix
 # errors that drown the real ones.
 connectors/*/generated
 connectors/*/prisma/generated
+
+# The n8n community node is a standalone package with its own eslint 9 toolchain.
+connectors/n8n

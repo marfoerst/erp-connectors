@@ -1,0 +1,14 @@
+{
+	"node": "n8n-nodes-scopevisio.scopevisioTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Finance & Accounting"],
+	"resources": {
+		"credentialDocumentation": [
+			{ "url": "https://github.com/marfoerst/erp-connectors/tree/main/connectors/n8n#credentials" }
+		],
+		"primaryDocumentation": [
+			{ "url": "https://github.com/marfoerst/erp-connectors/tree/main/connectors/n8n" }
+		]
+	}
+}

@@ -38,8 +38,27 @@ packages/
 connectors/
   shopify/           Remix app: OAuth, webhooks, order intake, Polaris admin
   shopware/          HTTP service: app handshake, signed webhooks, Admin API
+  n8n/               n8n community node — standalone, see below
 docs/
+research/
 ```
+
+### Why the n8n node does not use `scopevisio-core`
+
+n8n only verifies community nodes that have **no runtime dependencies**, and that
+never read environment variables or files. A workspace dependency on
+`@erp/scopevisio-core` would break both rules, and the package has to install on
+its own from npm.
+
+It is also excluded from the root workspaces, because it needs n8n's eslint 9
+toolchain while the Shopify connector pins eslint 8. It keeps its own
+`node_modules` and lockfile, and is built, linted and tested from its own folder.
+
+This is the one sanctioned exception to "never copy". What it shares in spirit
+with core — the search-body rule, the revenue-account merge — is re-implemented
+in `connectors/n8n/nodes/Scopevisio/helpers.ts` and tested there. The VAT
+decision itself (`tax-rules.ts`) is deliberately **not** in the node: the node
+exposes Scopevisio's own tax data and lets the workflow decide.
 
 ## The seam, and how it is enforced
 

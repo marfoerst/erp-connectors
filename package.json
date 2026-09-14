@@ -5,7 +5,8 @@
   "description": "Connectors that bring third-party systems into Scopevisio.",
   "workspaces": [
     "packages/*",
-    "connectors/*"
+    "connectors/shopify",
+    "connectors/shopware"
   ],
   "engines": {
     "node": ">=20.19 <22 || >=22.12"
